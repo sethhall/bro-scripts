@@ -7,5 +7,3 @@ Determination of a successful SSH connection is made by the byte count
 returned by the server.  The default is 5500 bytes.  Redef the 
 authentication_data_size variable to change it (for example)...
     redef SSH::authentication_data_size = 4000;
-
-DPD is currently necessary for this script to work.
