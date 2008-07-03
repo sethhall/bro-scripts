@@ -1,4 +1,3 @@
-#
 # Copyright 2008 Seth Hall <hall.692@osu.edu>
 #
 # Redistribution and use in source and binary forms, with or without
@@ -16,11 +15,12 @@
 # THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR IMPLIED
 # WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
 # MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+@load functions-ext
 
 module SSH;
 
 export {
-	const ext_log = open_log_file("ssh-ext") &redef;
+	const login_log = open_log_file("ssh-logins") &redef;
 	
 	const password_guesses_limit = 30 &redef;
 	const authentication_data_size = 5500 &redef;
@@ -51,24 +51,26 @@ global ssh_watching:bool = F;
 # Don't stop processing SSH connections in the default ssh policy script
 redef skip_processing_after_handshake = F;
 
-redef notice_policy += {
-	# Send email if a successful ssh login happens from or to a watched country
-	[$pred(n: notice_info) = 
-		{ return (n$note == SSH::SSH_Login && n$sub in watched_countries); },
-	 $result = NOTICE_EMAIL],
-
-	# Send email if a password guesser logs in successfully anywhere
-	# To avoid false positives, setting the lower bound for notification to 50 bad password attempts.
-	[$pred(n: notice_info) = 
-		{ return (n$note == SSH::SSH_LoginByPasswordGuesser && n$n > 50); },
-	 $result = NOTICE_EMAIL],
-
-	# Send email if a local host is password guessing.
-	[$pred(n: notice_info) = 
-		{ return (n$note == SSH::SSH_PasswordGuessing && 
-		          is_local_addr(n$conn$id$orig_h)); },
-	 $result = NOTICE_EMAIL], 
-};
+# Examples for how to handle notices from this script.
+#     (define these in a local script)...
+#redef notice_policy += {
+#	# Send email if a successful ssh login happens from or to a watched country
+#	[$pred(n: notice_info) = 
+#		{ return (n$note == SSH::SSH_Login && n$sub in watched_countries); },
+#	 $result = NOTICE_EMAIL],
+#
+#	# Send email if a password guesser logs in successfully anywhere
+#	# To avoid false positives, setting the lower bound for notification to 50 bad password attempts.
+#	[$pred(n: notice_info) = 
+#		{ return (n$note == SSH::SSH_LoginByPasswordGuesser && n$n > 50); },
+#	 $result = NOTICE_EMAIL],
+#
+#	# Send email if a local host is password guessing.
+#	[$pred(n: notice_info) = 
+#		{ return (n$note == SSH::SSH_PasswordGuessing && 
+#		          is_local_addr(n$conn$id$orig_h)); },
+#	 $result = NOTICE_EMAIL], 
+#};
 
 event check_ssh_connection(c: connection)
 	{
@@ -88,7 +90,7 @@ event check_ssh_connection(c: connection)
 
 		message = fmt("failed ssh login %s (saw %d bytes)",
 		              numeric_id_string(c$id), c$resp$size);
-		print ext_log, fmt("%.6f %s", network_time(), message);
+		print login_log, fmt("%.6f %s", network_time(), message);
 
 		if ( password_rejections[c$id$orig_h] > password_guesses_limit && 
 		     c$id$orig_h !in password_guessers )
@@ -127,7 +129,7 @@ event check_ssh_connection(c: connection)
 			        $conn=c,
 			        $msg=message,
 			        $sub=location$country_code]);
-			print ext_log, fmt("%.6f %s", network_time(), message);
+			print login_log, fmt("%.6f %s", network_time(), message);
 		}
 	}
 
