@@ -31,8 +31,8 @@ export {
 	# Keeps track of hosts identified as guessing passwords
 	global password_guessers: set[addr] &write_expire=guessing_timeout+1hr;
 	
-	# The set of countries for which you'd like to throw notices
-	#   require Bro compiled with libGeoIP support
+	# The set of countries for which you'd like to throw notices upon successful logins
+	#   requires Bro compiled with libGeoIP support
 	const watched_countries: set[string] = {"RO"} &redef;
 	
 	# This is a table with orig host as the key, and resp host as the value.
@@ -88,7 +88,7 @@ event check_ssh_connection(c: connection)
 		       c$id$resp_h in ignore_guessers[c$id$orig_h]) )
 			password_rejections[c$id$orig_h] += 1;
 
-		message = fmt("failed ssh login %s (saw %d bytes)",
+		message = fmt("Failed SSH login %s (saw %d bytes)",
 		              numeric_id_string(c$id), c$resp$size);
 		print login_log, fmt("%.6f %s", network_time(), message);
 
@@ -98,7 +98,9 @@ event check_ssh_connection(c: connection)
 			add password_guessers[c$id$orig_h];
 			NOTICE([$note=SSH_PasswordGuessing,
 			        $conn=c,
-			        $msg=fmt("ssh password guessing by %s", c$id$orig_h)]);
+			        $msg=fmt("SSH password guessing by %s", c$id$orig_h),
+			        $sub=fmt("%d failed logins", password_rejections[c$id$orig_h]),
+			        $n=password_rejections[c$id$orig_h]]);
 			}
 
 		} 
@@ -115,16 +117,17 @@ event check_ssh_connection(c: connection)
 			NOTICE([$note=SSH_LoginByPasswordGuesser,
 			        $conn=c,
 			        $n=password_rejections[c$id$orig_h],
-			        $msg=fmt("ssh successful login by password guesser %s attempted logging in %d times", 
-			                 numeric_id_string(c$id), password_rejections[c$id$orig_h])]);
+			        $msg=fmt("Successful SSH login by password guesser %s", c$id$orig_h),
+			        $sub=fmt("%d failed logins", password_rejections[c$id$orig_h])]);
 			}
 
 			local direction = is_local_addr(c$id$orig_h) ? "to" : "from";
 			local location = (direction == "to") ? lookup_location(c$id$resp_h) : lookup_location(c$id$orig_h);
-			message = fmt("ssh login %s %s \"%s\" \"%s\" %f %f %s (triggered with %d bytes)",
+			message = fmt("SSH login %s %s \"%s\" \"%s\" %f %f %s (triggered with %d bytes)",
 			              direction, location$country_code, location$region, location$city,
 			              location$latitude, location$longitude,
 			              numeric_id_string(c$id), c$resp$size);
+			# TODO: rewrite the message once a location variable can be put in notices
 			NOTICE([$note=SSH_Login,
 			        $conn=c,
 			        $msg=message,
@@ -146,7 +149,7 @@ event ssh_watcher()
 	{
 	for ( id in ssh_conns )
 		{
-		# don't go any further if this connection is gone already
+		# don't go any further if this connection is gone already!
 		if ( !connection_exists(id) )
 			next;
 
