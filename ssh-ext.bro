@@ -31,7 +31,7 @@ export {
 	# Keeps track of hosts identified as guessing passwords
 	global password_guessers: set[addr] &write_expire=guessing_timeout+1hr;
 	
-	# The set of countries for which you'd like to throw notices upon successful logins
+	# The set of countries for which you'd like to throw notices upon successful login
 	#   requires Bro compiled with libGeoIP support
 	const watched_countries: set[string] = {"RO"} &redef;
 	
