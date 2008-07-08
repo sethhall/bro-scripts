@@ -15,9 +15,9 @@
 # THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR IMPLIED
 # WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
 # MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+@load http
 
 module HTTP;
-
 
 export {
 	const http_magic_log = open_log_file("http-identified-files") &raw_output &redef;
@@ -88,16 +88,21 @@ event http_entity_data(c: connection, is_orig: bool, length: count, data: string
 		if ( ignored_urls in url )
 			return;
 		
-		local file_type: string = "";
+		local file_type = "";
 		if ( magic_mime in watched_mime_types )
 			file_type = magic_mime;
 		else
 			file_type = magic_descr;
 		
-		print http_magic_log, cat_sep("\t", "\\N", network_time(), s$id, c$id$orig_h, fmt("%d", c$id$orig_p), c$id$resp_h, fmt("%d", c$id$resp_p), file_type, r$method, url);
+		print http_magic_log, cat_sep("\t", "\\N", network_time(), s$id, 
+		                                           c$id$orig_h, fmt("%d", c$id$orig_p), 
+		                                           c$id$resp_h, fmt("%d", c$id$resp_p), 
+		                                           file_type, r$method, url);
 		
-		if ( (magic_mime in mime_types_extensions && mime_types_extensions[magic_mime] !in url) ||
-		     (magic_descr in mime_types_extensions && mime_types_extensions[magic_descr] !in url) )
+		if ( (magic_mime in mime_types_extensions && 
+		      mime_types_extensions[magic_mime] !in url) ||
+		     (magic_descr in mime_types_extensions && 
+		      mime_types_extensions[magic_descr] !in url) )
 			{
 			local message = fmt("%s %s %s", file_type, r$method, url);
 			NOTICE([$note=HTTP_IncorrectFileType, 
@@ -108,4 +113,5 @@ event http_entity_data(c: connection, is_orig: bool, length: count, data: string
 			}
 		}
 	}
+
 
