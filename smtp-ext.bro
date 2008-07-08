@@ -23,6 +23,8 @@
 module SMTP;
 
 export {
+	global smtp_ext_log = open_log_file("smtp_ext") &raw_output &redef;
+
 	redef enum Notice += { 
 		# Thrown when a local host receives a reply mentioning an smtp block list
 		SMTP_BL_Error_Message, 
@@ -49,7 +51,6 @@ type session_info: record {
 	last_reply: string &default=""; # last message the server sent to the client
 };
 
-global smtp_ext_log = open_log_file("smtp_ext") &raw_output;
 
 function default_session_info(): session_info
 	{

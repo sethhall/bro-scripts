@@ -22,3 +22,28 @@ function numeric_id_string(id: conn_id): string
 	           id$orig_h, id$orig_p,
 	           id$resp_h, id$resp_p);
 	}
+
+function fmt_str_set(input: string_set, strip: pattern): string
+	{
+	local output = "{";
+	local tmp = "";
+	local len = length(input);
+	local i = 1;
+	
+	for ( item in input )
+		{
+		tmp = fmt("%s", gsub(item, strip, ""));
+		if ( len != i )
+			tmp = fmt("%s, ", tmp);
+		i = i+1;
+		output = fmt("%s%s", output, tmp);
+		}
+	return fmt("%s}", output);
+	}
+	
+const ip_addr_regex = /^[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}$/;
+# TODO: match ipv6 addresses also
+function is_valid_ip(ip_str: string): bool
+	{
+	return (ip_str == ip_addr_regex);
+	}
