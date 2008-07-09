@@ -22,7 +22,7 @@
 module KnownCerts;
 
 export {
-	const log = open_log_file("known-ssl-certs") &raw_output &redef;
+	const log = open_log_file("ssl-known-certs") &raw_output &redef;
 
 	# The list of all detected certs.  This prevents over-logging.
 	global certs: set[addr, port, string] &create_expire=1day &synchronized;
