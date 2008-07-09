@@ -32,10 +32,10 @@ export {
 	};
 	
 	# Direction to capture the full "Received from" path. (from the Direction enum)
-	#    inbound - only capture the path until an internal host is found.
-	#    outbound - only capture the path until the external host is discovered.
-	#    bidirectional - capture the entire path.
-	const mail_path_capture_direction: Direction = Outbound &redef;
+	#    ExternalHosts - only capture the path until an internal host is found.
+	#    InternalHosts - only capture the path until the external host is discovered.
+	#    AllHosts - capture the entire path.
+	const mail_path_capture: Hosts = LocalHosts &redef;
 
 	# This matches content in SMTP error messages that indicate some
 	# block list doesn't like the connection/mail.
@@ -97,13 +97,12 @@ event smtp_data(c: connection, is_orig: bool, data: string)
 	{
 	local id = c$id;
 	
-	if ( !conn_matches_direction(id, mail_path_capture_direction) ||
-	     id !in smtp_sessions )
+	if ( id !in smtp_sessions )
 		return;
 
-	if ( /^[^[:blank:]]*?: / in data && id !in smtp_received_finished ) 
+	if ( /^[^[:blank:]]*?:[[:blank:]]/ in data && id !in smtp_received_finished ) 
 		delete in_received_from_headers[id];
-	if ( /^Received: / in data && id !in smtp_received_finished ) 
+	if ( /^Received:[[:blank:]]/ in data && id !in smtp_received_finished ) 
 		add in_received_from_headers[id];
 	
 	local session = smtp_sessions[id];
@@ -123,7 +122,7 @@ event smtp_data(c: connection, is_orig: bool, data: string)
 			# I don't care if mail bounces around on localhost
 			if ( ip == 127.0.0.1 ) return;
 			
-			if ( orig_h_matches_direction(ip, mail_path_capture_direction) || 
+			if ( ip_matches_hosts(ip, mail_path_capture) || 
 			     ip in private_address_space )
 				{
 				if (smtp_forward_paths[id] == "")

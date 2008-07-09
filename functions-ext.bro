@@ -47,9 +47,11 @@ function is_valid_ip(ip_str: string): bool
 	{
 	return (ip_str == ip_addr_regex);
 	}
-
-# This enum and the associated functions help to build 
+	
+# Some enums for deciding what and when to log.
 type Direction: enum { Inbound, Outbound, BiDirectional };
+type Hosts: enum { LocalHosts, RemoteHosts, AllHosts };
+
 function orig_h_matches_direction(ip: addr, d: Direction): bool
 	{
 	return ( (d == Outbound && is_local_addr(ip)) ||
@@ -59,4 +61,10 @@ function orig_h_matches_direction(ip: addr, d: Direction): bool
 function conn_matches_direction(id: conn_id, d: Direction): bool
 	{
 	return orig_h_matches_direction(id$orig_h, d);
+	}
+function ip_matches_hosts(ip: addr, d: Hosts): bool
+	{
+	return ( (d == LocalHosts && is_local_addr(ip)) ||
+	         (d == RemoteHosts && !is_local_addr(ip)) ||
+	         d == AllHosts );
 	}
