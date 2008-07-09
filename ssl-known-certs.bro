@@ -19,7 +19,7 @@
 @load global-ext
 @load ssl
 
-module KnownCerts;
+module SSL_KnownCerts;
 
 export {
 	const log = open_log_file("ssl-known-certs") &raw_output &redef;
