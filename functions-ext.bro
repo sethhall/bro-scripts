@@ -47,3 +47,16 @@ function is_valid_ip(ip_str: string): bool
 	{
 	return (ip_str == ip_addr_regex);
 	}
+
+# This enum and the associated functions help to build 
+type Direction: enum { inbound, outbound, bidirectional };
+function orig_h_matches_direction(ip: addr, d: Direction): bool
+	{
+	return ( (d == outbound && is_local_addr(ip)) ||
+	         (d == inbound && !is_local_addr(ip)) ||
+	         d == bidirectional );
+	}
+function conn_matches_direction(id: conn_id, d: Direction): bool
+	{
+	return orig_h_matches_direction(id$orig_h, d);
+	}

@@ -18,7 +18,6 @@
 
 @load smtp
 @load global-ext
-@load functions-ext
 
 module SMTP;
 
@@ -31,32 +30,39 @@ export {
 		# Thrown when the local address is seen in the block list error message
 		SMTP_BL_Blocked_Host, 
 	};
+	
+	# Direction to capture the full "Received from" path. (from the Direction enum)
+	#    inbound - only capture the path until an internal host is found.
+	#    outbound - only capture the path until the external host is discovered.
+	#    bidirectional - capture the entire path.
+	const mail_path_capture_direction: Direction = outbound &redef;
 
-	# This matches content in SMTP error messages that indicate some block list doesn't like the connection/mail.
+	# This matches content in SMTP error messages that indicate some
+	# block list doesn't like the connection/mail.
 	const smtp_bl_error_messages = 
 	    /www\.spamhaus\.org\//
-	  | /cbl\.abuseat\.org\// &redef;
+	  | /cbl\.abuseat\.org\// 
+	  | /www\.sorbs\.net\// &redef;
 }
 
 type session_info: record {
-	msg_id: string;
-	in_reply_to: string;
-	helo: string;
-	mailfrom: string;
-	rcptto: string_set;
-	date: string;
-	from: string;
-	to: string_set;
-	reply_to: string;
+	msg_id: string &default="";
+	in_reply_to: string &default="";
+	helo: string &default="";
+	mailfrom: string &default="";
+	rcptto: set[string];
+	date: string &default="";
+	from: string &default="";
+	to: set[string];
+	reply_to: string &default="";
 	last_reply: string &default=""; # last message the server sent to the client
 };
-
-
+	
 function default_session_info(): session_info
 	{
-	local tmp: string_set = set();
-	local tmp2: string_set = set();
-	return [$msg_id="", $in_reply_to="", $helo="", $rcptto=tmp, $mailfrom="", $date="", $from="", $to=tmp2, $reply_to=""];
+	local tmp: set[string] = set();
+	local tmp2: set[string] = set();
+	return [$rcptto=tmp, $to=tmp2];
 	}
 # TODO: setting a default function doesn't seem to be working correctly here.
 global conn_info: table[conn_id] of session_info &read_expire=10secs;
@@ -89,19 +95,19 @@ function find_address_in_smtp_header(header: string): string
 # headers in the mail
 event smtp_data(c: connection, is_orig: bool, data: string)
 	{
-	# only build this trace for mail emanating from our networks
-	if ( !is_local_addr(c$id$orig_h) ) return;
-
 	local id = c$id;
-	if ( id !in smtp_sessions )
-		return; # bro is not analyzing it as a smtp session
 	
+	if ( !conn_matches_direction(id, mail_path_capture_direction) ||
+	     id !in smtp_sessions )
+		return;
+
 	if ( /^[^[:blank:]]*?: / in data && id !in smtp_received_finished ) 
 		delete in_received_from_headers[id];
 	if ( /^Received: / in data && id !in smtp_received_finished ) 
 		add in_received_from_headers[id];
 	
 	local session = smtp_sessions[id];
+	
 	if ( session$in_header &&              # headers are currently being analyzed 
 	     id in in_received_from_headers && # currently seeing received from headers
 	     id !in smtp_received_finished &&  # we don't want to stop seeing this message yet
@@ -109,31 +115,32 @@ event smtp_data(c: connection, is_orig: bool, data: string)
 		{
 		local text_ip = find_address_in_smtp_header(data);
     
-		# check for valid-ish ip - some mtas are weird and I don't want to create any vulnerabilities.
+		# check for valid-ish ip - some mtas are weird.
 		if ( is_valid_ip(text_ip) )
 			{
 			local ip = to_addr(text_ip);
-    
-			if ( (is_local_addr(ip) || ip in private_address_space) &&
-			     ip != 127.0.0.1 ) # I don't care if mail bounces around on localhost
+			
+			# I don't care if mail bounces around on localhost
+			if ( ip == 127.0.0.1 ) return;
+			
+			if ( orig_h_matches_direction(ip, mail_path_capture_direction) || 
+			     ip in private_address_space )
 				{
 				if (smtp_forward_paths[id] == "")
-					smtp_forward_paths[id] = fmt("%s", ip);
+					smtp_forward_paths[id] = fmt("%s :: %s -> %s", ip, id$orig_h, id$resp_h);
 				else
 					smtp_forward_paths[id] = fmt("%s -> %s", ip, smtp_forward_paths[id]);
 				} 
 			else 
 				{
 				if (smtp_forward_paths[id] == "")
-					smtp_forward_paths[id] = fmt("outside (%s)", ip);
+					smtp_forward_paths[id] = fmt("... %s :: %s -> %s", ip, id$orig_h, id$resp_h);
 				else
-					smtp_forward_paths[id] = fmt("outside (%s) -> %s", ip, smtp_forward_paths[id]);
+					smtp_forward_paths[id] = fmt("... %s -> %s", ip, smtp_forward_paths[id]);
 				
 				add smtp_received_finished[id]; 
 				}
 			}
-		
-			
 		} 
 	else if ( !session$in_header && id !in smtp_received_finished ) 
 		{
@@ -146,19 +153,14 @@ function end_smtp_extended_logging(id: conn_id)
 	{
 	if ( id !in conn_info )
 		return;
-
 	local conn_log = conn_info[id];
 	
-	local forward_path = "";
-	if ( id in smtp_forward_paths )
-		forward_path = smtp_forward_paths[id];
-
 	print smtp_ext_log, cat_sep("\t", "\\N", network_time(), 
 	                            id$orig_h, fmt("%d", id$orig_p), id$resp_h, fmt("%d", id$resp_p),
 	                            conn_log$helo, conn_log$msg_id, conn_log$in_reply_to, 
 	                            conn_log$mailfrom, fmt_str_set(conn_log$rcptto, /[\"\'<>]|([[:blank:]].*$)/),
 	                            conn_log$date, conn_log$from, conn_log$reply_to, fmt_str_set(conn_log$to, /[\"\']/),
-	                            conn_log$last_reply, forward_path);
+	                            conn_log$last_reply, smtp_forward_paths[id]);
 	}
 
 event smtp_reply(c: connection, is_orig: bool, code: count, cmd: string,
