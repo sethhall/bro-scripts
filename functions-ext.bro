@@ -49,12 +49,12 @@ function is_valid_ip(ip_str: string): bool
 	}
 
 # This enum and the associated functions help to build 
-type Direction: enum { inbound, outbound, bidirectional };
+type Direction: enum { Inbound, Outbound, BiDirectional };
 function orig_h_matches_direction(ip: addr, d: Direction): bool
 	{
-	return ( (d == outbound && is_local_addr(ip)) ||
-	         (d == inbound && !is_local_addr(ip)) ||
-	         d == bidirectional );
+	return ( (d == Outbound && is_local_addr(ip)) ||
+	         (d == Inbound && !is_local_addr(ip)) ||
+	         d == BiDirectional );
 	}
 function conn_matches_direction(id: conn_id, d: Direction): bool
 	{

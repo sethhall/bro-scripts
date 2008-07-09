@@ -35,7 +35,7 @@ export {
 	#    inbound - only capture the path until an internal host is found.
 	#    outbound - only capture the path until the external host is discovered.
 	#    bidirectional - capture the entire path.
-	const mail_path_capture_direction: Direction = outbound &redef;
+	const mail_path_capture_direction: Direction = Outbound &redef;
 
 	# This matches content in SMTP error messages that indicate some
 	# block list doesn't like the connection/mail.
@@ -175,9 +175,14 @@ event smtp_reply(c: connection, is_orig: bool, code: count, cmd: string,
 		# If a local MTA receives a message from a remote host telling it that it's on a block list, raise a notice.
 		if ( smtp_bl_error_messages in msg && is_local_addr(c$id$orig_h) )
 			{
-			local text_ip = sub(msg, /^.*ip=/, "");
-			text_ip = sub(text_ip, /[[:blank:]].*/, "");
 			local note = SMTP_BL_Error_Message;
+
+			# Determine if the originator's IP address is in the message.
+			# TODO: make this work with IPv6
+			local msg_parts = split_all(msg, /[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}/);
+			local text_ip = "";
+			if ( |msg_parts| > 2 )
+				text_ip = msg_parts[2];
 			if ( is_valid_ip(text_ip) && to_addr(text_ip) == c$id$orig_h )
 				note = SMTP_BL_Blocked_Host;
 			
