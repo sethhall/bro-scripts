@@ -42,7 +42,12 @@ export {
 	const smtp_bl_error_messages = 
 	    /www\.spamhaus\.org\//
 	  | /cbl\.abuseat\.org\// 
-	  | /www\.sorbs\.net\// &redef;
+	  | /www\.sorbs\.net\// 
+	  | /bsn\.borderware\.com\//
+	  | /psbl\.surriel\.com\// 
+	  | /antispam\.imp\.ch\// 
+	  | /www\.dyndns\.com\/.*spam/
+	  | /intercept\.datapacket\.net\// &redef;
 }
 
 type session_info: record {
