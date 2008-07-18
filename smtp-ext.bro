@@ -22,7 +22,7 @@
 module SMTP;
 
 export {
-	global smtp_ext_log = open_log_file("smtp_ext") &raw_output &redef;
+	global smtp_ext_log = open_log_file("smtp-ext") &raw_output &redef;
 
 	redef enum Notice += { 
 		# Thrown when a local host receives a reply mentioning an smtp block list
@@ -32,8 +32,8 @@ export {
 	};
 	
 	# Direction to capture the full "Received from" path. (from the Direction enum)
-	#    ExternalHosts - only capture the path until an internal host is found.
-	#    InternalHosts - only capture the path until the external host is discovered.
+	#    RemoteHosts - only capture the path until an internal host is found.
+	#    LocalHosts - only capture the path until the external host is discovered.
 	#    AllHosts - capture the entire path.
 	const mail_path_capture: Hosts = LocalHosts &redef;
 
