@@ -40,9 +40,9 @@ function fmt_str_set(input: string_set, strip: pattern): string
 		}
 	return fmt("%s}", output);
 	}
-	
+
+# TODO: include IPv6 regexes
 const ip_addr_regex = /^[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}$/;
-# TODO: match ipv6 addresses also
 function is_valid_ip(ip_str: string): bool
 	{
 	return (ip_str == ip_addr_regex);

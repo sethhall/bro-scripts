@@ -76,6 +76,14 @@ global in_received_from_headers: set[conn_id] &create_expire = 2min;
 global smtp_received_finished: set[conn_id] &create_expire = 2min;
 global smtp_forward_paths: table[conn_id] of string &create_expire = 2min &default = "";
 
+# Examples for how to handle notices from this script.
+#     (define these in a local script)...
+#redef notice_policy += {
+#	# Send email if a local host is on an SMTP watch list
+#	[$pred(n: notice_info) = 
+#		{ return (n$note == SMTP::SMTP_BL_Blocked_Host && is_local_addr(n$conn$id$orig_h)); },
+#	 $result = NOTICE_EMAIL],
+#};
 
 function find_address_in_smtp_header(header: string): string
 {
@@ -176,24 +184,27 @@ event smtp_reply(c: connection, is_orig: bool, code: count, cmd: string,
 		{
 		conn_info[id]$last_reply = fmt("%d %s", code, msg);
 
-		# If a local MTA receives a message from a remote host telling it that it's on a block list, raise a notice.
-		if ( smtp_bl_error_messages in msg && is_local_addr(c$id$orig_h) )
+		# Raise a notice when an SMTP error about a block list is discovered.
+		if ( smtp_bl_error_messages in msg )
 			{
 			local note = SMTP_BL_Error_Message;
+			local message = fmt("%s received an error message mentioning an SMTP block list", c$id$orig_h);
 
 			# Determine if the originator's IP address is in the message.
-			# TODO: make this work with IPv6
-			local msg_parts = split_all(msg, /[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}/);
+			local msg_parts = split_all(msg, ip_addr_regex);
 			local text_ip = "";
 			if ( |msg_parts| > 2 )
 				text_ip = msg_parts[2];
 			if ( is_valid_ip(text_ip) && to_addr(text_ip) == c$id$orig_h )
+				{
 				note = SMTP_BL_Blocked_Host;
+				message = fmt("%s is on an SMTP block list", c$id$orig_h);
+				}
 			
 			NOTICE([$note=note, 
 			        $conn=c, 
-			        $msg=fmt("%s received an error message mentioning an SMTP block list", c$id$orig_h),
-			        $sub=fmt("Remote host said: %s", msg)]);
+			        $msg=message,
+			        $sub=msg]);
 			}
 		}
 	}
