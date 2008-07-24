@@ -41,12 +41,75 @@ function fmt_str_set(input: string_set, strip: pattern): string
 	return fmt("%s}", output);
 	}
 
-# TODO: include IPv6 regexes
-const ip_addr_regex = /^[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}$/;
+# Regular expressions for matching IP addresses in strings.
+const ipv4_addr_regex = /[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}/;
+const ipv6_8hex_regex = /([0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}/;
+const ipv6_compressed_hex_regex = /(([0-9A-Fa-f]{1,4}(:[0-9A-Fa-f]{1,4})*)?)::(([0-9A-Fa-f]{1,4}(:[0-9A-Fa-f]{1,4})*)?)/;
+const ipv6_hex4dec_regex = /(([0-9A-Fa-f]{1,4}:){6,6})([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)/;
+const ipv6_compressed_hex4dec_regex = /(([0-9A-Fa-f]{1,4}(:[0-9A-Fa-f]{1,4})*)?)::(([0-9A-Fa-f]{1,4}:)*)([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)/;
+
+# These are only commented out until this bug is fixed:
+#    http://www.bro-ids.org/wiki/index.php/Known_Issues#Bug_with_OR-ing_together_pattern_variables
+#const ipv6_addr_regex = ipv6_8hex_regex |
+#                        ipv6_compressed_hex_regex |
+#                        ipv6_hex4dec_regex |
+#                        ipv6_compressed_hex4dec_regex;
+#const ip_addr_regex = ipv4_addr_regex | ipv6_addr_regex;
+
+const ipv6_addr_regex =     
+    /([0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}/ |
+    /(([0-9A-Fa-f]{1,4}(:[0-9A-Fa-f]{1,4})*)?)::(([0-9A-Fa-f]{1,4}(:[0-9A-Fa-f]{1,4})*)?)/ | # IPv6 Compressed Hex
+    /(([0-9A-Fa-f]{1,4}:){6,6})([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)/ | # 6Hex4Dec
+    /(([0-9A-Fa-f]{1,4}(:[0-9A-Fa-f]{1,4})*)?)::(([0-9A-Fa-f]{1,4}:)*)([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)/; # CompressedHex4Dec
+
+const ip_addr_regex = 
+    /[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}/ |
+    /([0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}/ |
+    /(([0-9A-Fa-f]{1,4}(:[0-9A-Fa-f]{1,4})*)?)::(([0-9A-Fa-f]{1,4}(:[0-9A-Fa-f]{1,4})*)?)/ | # IPv6 Compressed Hex
+    /(([0-9A-Fa-f]{1,4}:){6,6})([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)/ | # 6Hex4Dec
+    /(([0-9A-Fa-f]{1,4}(:[0-9A-Fa-f]{1,4})*)?)::(([0-9A-Fa-f]{1,4}:)*)([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)/; # CompressedHex4Dec
+
 function is_valid_ip(ip_str: string): bool
 	{
-	return (ip_str == ip_addr_regex);
+	if ( ip_str == ipv4_addr_regex )
+		{
+		local octets = split(ip_str, /\./);
+		if ( |octets| > 4 )
+			return F;
+		
+		local num=0;
+		for ( i in octets )
+			{
+			num = to_count(octets[i]);
+			if ( num < 0 || 255 < num )
+				return F;
+			}
+		return T;
+		}
+	else if ( ip_str == ipv6_addr_regex )
+		{
+		# TODO: make this work correctly.
+		return T;
+		}
+	return F;
 	}
+
+# This output a string_array of ip addresses extracted from a string.
+# given: "this is 1.1.1.1 a test 2.2.2.2 string with ip addresses 3.3.3.3"
+# outputs: { [1] = 1.1.1.1, [2] = 2.2.2.2, [3] = 3.3.3.3 }
+function find_ip_addresses(input: string): string_array
+	{
+	local parts = split_all(input, ip_addr_regex);
+	local output: string_array;
+	
+	for ( i in parts )
+		{
+		if ( i % 2 == 0 && is_valid_ip(parts[i]) )
+			output[i/2] = parts[i];
+		}
+	return output;
+	}
+
 	
 # Some enums for deciding what and when to log.
 type Direction: enum { Inbound, Outbound, BiDirectional };
