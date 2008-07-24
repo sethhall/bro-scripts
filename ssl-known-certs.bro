@@ -36,7 +36,7 @@ event ssl_certificate(c: connection, cert: X509, is_server: bool)
 	# The ssl analyzer doesn't do this yet, so let's do it here.
 	add c$service["SSL"];
 	
-	if ( !ip_matches_hosts(c$id$resp_h, logged_hosts) )
+	if ( !addr_matches_hosts(c$id$resp_h, logged_hosts) )
 		return;
 	
 	lookup_ssl_conn(c, "ssl_certificate", T);

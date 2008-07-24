@@ -62,7 +62,7 @@ function conn_matches_direction(id: conn_id, d: Direction): bool
 	{
 	return orig_h_matches_direction(id$orig_h, d);
 	}
-function ip_matches_hosts(ip: addr, d: Hosts): bool
+function addr_matches_hosts(ip: addr, d: Hosts): bool
 	{
 	return ( (d == LocalHosts && is_local_addr(ip)) ||
 	         (d == RemoteHosts && !is_local_addr(ip)) ||

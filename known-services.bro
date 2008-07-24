@@ -35,7 +35,7 @@ event connection_established(c: connection)
 	{
 	local id = c$id;
 	if ( [id$resp_h, id$resp_p] !in established_conns && 
-	     ip_matches_hosts(id$resp_h, logged_hosts) )
+	     addr_matches_hosts(id$resp_h, logged_hosts) )
 		add established_conns[id$resp_h, id$resp_p];
 	}
 	

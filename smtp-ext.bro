@@ -135,7 +135,7 @@ event smtp_data(c: connection, is_orig: bool, data: string)
 			# I don't care if mail bounces around on localhost
 			if ( ip == 127.0.0.1 ) return;
 			
-			if ( ip_matches_hosts(ip, mail_path_capture) || 
+			if ( addr_matches_hosts(ip, mail_path_capture) || 
 			     ip in private_address_space )
 				{
 				if (smtp_forward_paths[id] == "")
