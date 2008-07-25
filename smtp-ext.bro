@@ -172,8 +172,9 @@ event smtp_data(c: connection, is_orig: bool, data: string)
 
 # This is a locally defined event.  Handle it with a priority greater than
 # negative 5 if you want to dig into the conn_info record before it's deleted.
-function end_smtp_extended_logging(id: conn_id)
+function end_smtp_extended_logging(c: connection)
 	{
+	local id = c$id;
 	local conn_log = conn_info[id];
 	
 	local loc: geo_location;
@@ -188,7 +189,8 @@ function end_smtp_extended_logging(id: conn_id)
 			{
 			NOTICE([$note=SMTP_Suspicious_Origination,
 				    $msg=fmt("An email originated from %s (%s).", loc$country_code, ip),
-				    $sub=fmt("Subject: %s", conn_log$subject)]);
+				    $sub=fmt("Subject: %s", conn_log$subject),
+				    $conn=c]);
 			}
 		}
 		
@@ -203,7 +205,8 @@ function end_smtp_extended_logging(id: conn_id)
 			{
 			NOTICE([$note=SMTP_Suspicious_Origination,
 				    $msg=fmt("An email originated from %s (%s).", loc$country_code, ip),
-				    $sub=fmt("Subject: %s", conn_log$subject)]);
+				    $sub=fmt("Subject: %s", conn_log$subject),
+					$conn=c]);
 			}
 		}
 
@@ -272,7 +275,7 @@ event smtp_request(c: connection, is_orig: bool, command: string, arg: string) &
 	     id in conn_info )
 		{
 		local tmp_helo = conn_info[id]$helo;
-		end_smtp_extended_logging(id);
+		end_smtp_extended_logging(c);
 		conn_info[id] = default_session_info();
 		conn_info[id]$helo = tmp_helo;
 		}
@@ -385,11 +388,11 @@ event smtp_data(c: connection, is_orig: bool, data: string) &priority=-5
 event connection_finished(c: connection) &priority=5
 	{
 	if ( c$id in conn_info )
-		end_smtp_extended_logging(c$id);
+		end_smtp_extended_logging(c);
 	}
 
 event connection_state_remove(c: connection) &priority=5
 	{
 	if ( c$id in conn_info )
-		end_smtp_extended_logging(c$id);
+		end_smtp_extended_logging(c);
 	}
