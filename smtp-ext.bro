@@ -170,8 +170,6 @@ event smtp_data(c: connection, is_orig: bool, data: string)
 	}
 @endif
 
-# This is a locally defined event.  Handle it with a priority greater than
-# negative 5 if you want to dig into the conn_info record before it's deleted.
 function end_smtp_extended_logging(c: connection)
 	{
 	local id = c$id;
