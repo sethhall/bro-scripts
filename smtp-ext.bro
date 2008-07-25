@@ -202,7 +202,7 @@ function end_smtp_extended_logging(id: conn_id)
 			 ip in suspicious_origination_networks )
 			{
 			NOTICE([$note=SMTP_Suspicious_Origination,
-				    $msg=fmt("An email originated from %s (%s). Subject: %s", loc$country_code, ip, conn_log$subject),
+				    $msg=fmt("An email originated from %s (%s).", loc$country_code, ip),
 				    $sub=fmt("Subject: %s", conn_log$subject)]);
 			}
 		}
