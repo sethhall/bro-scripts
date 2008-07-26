@@ -123,10 +123,10 @@ function find_address_in_smtp_header(header: string): string
 event smtp_data(c: connection, is_orig: bool, data: string)
 	{
 	local id = c$id;
-	local session = smtp_sessions[id];
 
-	if ( id !in conn_info || 
-		 !session$in_header || 
+	if ( id !in conn_info ||
+		 id !in smtp_sessions ||
+		 !smtp_sessions[id]$in_header || 
 		 id in smtp_received_finished)
 		return;
 		
@@ -165,7 +165,7 @@ event smtp_data(c: connection, is_orig: bool, data: string)
 		else
 			conn_log$path = fmt("%s%s -> %s", ellipsis, ip, conn_log$path);
 		}
-	else if ( !session$in_header && id !in smtp_received_finished ) 
+	else if ( !smtp_sessions[id]$in_header && id !in smtp_received_finished ) 
 		add smtp_received_finished[id];
 	}
 @endif
