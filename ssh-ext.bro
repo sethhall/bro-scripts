@@ -17,7 +17,8 @@
 # MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 
 @load global-ext
-
+@load ssh
+	
 module SSH;
 
 export {
