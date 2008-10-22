@@ -110,10 +110,10 @@ function find_address_in_smtp_header(header: string): string
 {
 	local ips = find_ip_addresses(header);
 		
-	if ( |ips| > 0 )
-		return ips[1];
 	if ( |ips| > 1 )
 		return ips[2];
+	if ( |ips| > 0 )
+		return ips[1];
 	return "";
 }
 
