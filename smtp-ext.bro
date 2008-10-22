@@ -55,6 +55,7 @@ export {
 	const smtp_bl_error_messages = 
 	    /spamhaus\.org\//
 	  | /sophos\.com\/security\//
+	  | /spamcop\.net\/bl/
 	  | /cbl\.abuseat\.org\// 
 	  | /sorbs\.net\// 
 	  | /bsn\.borderware\.com\//
