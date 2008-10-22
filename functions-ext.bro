@@ -74,7 +74,7 @@ function is_valid_ip(ip_str: string): bool
 	if ( ip_str == ipv4_addr_regex )
 		{
 		local octets = split(ip_str, /\./);
-		if ( |octets| > 4 )
+		if ( |octets| != 4 )
 			return F;
 		
 		local num=0;
