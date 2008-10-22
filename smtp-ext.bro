@@ -53,15 +53,16 @@ export {
 	# This matches content in SMTP error messages that indicate some
 	# block list doesn't like the connection/mail.
 	const smtp_bl_error_messages = 
-	    /www\.spamhaus\.org\//
+	    /spamhaus\.org\//
+	  | /sophos\.com\/security\//
 	  | /cbl\.abuseat\.org\// 
-	  | /www\.sorbs\.net\// 
+	  | /sorbs\.net\// 
 	  | /bsn\.borderware\.com\//
 	  | /mail-abuse\.com\//
 	  | /bbl\.barracudacentral\.com\//
 	  | /psbl\.surriel\.com\// 
 	  | /antispam\.imp\.ch\// 
-	  | /www\.dyndns\.com\/.*spam/
+	  | /dyndns\.com\/.*spam/
 	  | /intercept\.datapacket\.net\// &redef;
 }
 
