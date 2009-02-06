@@ -84,7 +84,14 @@ type http_info: record {
 };
 
 global http_log_post: set[conn_id] &write_expire=15secs;
-global session_http_info: table[conn_id] of http_info &write_expire=5secs;
+
+function default_http_session_info(id: conn_id): http_info
+	{
+	local tmp: http_info;
+	return tmp;
+	}
+
+global session_http_info: table[conn_id] of http_info &default=default_http_session_info &write_expire=15secs;
 
 # remember the set of user agents at an ip address for while
 global http_remember_user_agents: table[addr] of string_set &synchronized &create_expire=1hr;
@@ -93,20 +100,20 @@ event http_message_done(c: connection, is_orig: bool, stat: http_message_stat) &
 	{
 	if ( !is_orig )
 		return; 
-
+	
 	local id = c$id;
 	local s = lookup_http_request_stream(c);
 	if ( s$first_pending_request !in s$requests )
 		return;
-		
+	
 	local msg = get_http_message(s, is_orig);
 	local r = s$requests[s$first_pending_request];
 	local host = session_http_info[c$id]$host;
 	local url = fmt("http://%s%s", host, r$URI);
-
+	
 	if ( addr_matches_hosts(id$resp_h, log_requests_toward) || 
 	     id$resp_h in ok_to_log )
-
+	
 		print http_ext_log, cat_sep("\t", "\\N", network_time(), 
 		                                         id$orig_h, 
 		                                         fmt("%d", id$orig_p), 
@@ -115,7 +122,7 @@ event http_message_done(c: connection, is_orig: bool, stat: http_message_stat) &
 		                                         r$method, 
 		                                         url, 
 		                                         session_http_info[c$id]$referer);
-
+	
 	local log_sql=F;
 	local direction = "";
 	# Detect and log SQL injection attempts in their own log file
@@ -190,7 +197,7 @@ event http_header(c: connection, is_orig: bool, name: string, value: string)
 	if ( name == "USER-AGENT" )
 		{
 		session_http_info[c$id]$user_agent = value;
-		if ( addr_matches_hosts(c$id$resp_h, log_user_agents_of) &&
+		if ( addr_matches_hosts(c$id$orig_h, log_user_agents_of) &&
 		    (c$id$orig_h !in http_remember_user_agents ||
 		     (c$id$orig_h in http_remember_user_agents && 
 		      value !in http_remember_user_agents[c$id$orig_h]) ) )
