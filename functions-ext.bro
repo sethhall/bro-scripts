@@ -5,11 +5,32 @@ function numeric_id_string(id: conn_id): string
 	           id$resp_h, id$resp_p);
 	}
 
-function fmt_str_set(input: string_set, strip: pattern): string
+function fmt_addr_set(input: addr_set): string
 	{
-	local output = "{";
+	local output = "";
 	local tmp = "";
 	local len = length(input);
+	local i = 1;
+
+	for ( item in input )
+		{
+		tmp = fmt("%s", item);
+		if ( len != i )
+			tmp = fmt("%s ", tmp);
+		i = i+1;
+		output = fmt("%s%s", output, tmp);
+		}
+	return fmt("%s", output);
+	}
+	
+function fmt_str_set(input: string_set, strip: pattern): string
+	{
+	local len = length(input);
+	if ( len == 0 )
+		return "{}";
+	
+	local output = "{";
+	local tmp = "";
 	local i = 1;
 	
 	for ( item in input )

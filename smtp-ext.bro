@@ -46,6 +46,7 @@ export {
 	  | /psbl\.surriel\.com\// 
 	  | /antispam\.imp\.ch\// 
 	  | /dyndns\.com\/.*spam/
+	  | /rbl\.knology\.net\//
 	  | /intercept\.datapacket\.net\// &redef;
 }
 
