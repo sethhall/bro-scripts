@@ -9,7 +9,7 @@ export {
 	#   the use_md5_hashed_ssns variable to T and put md5 hashed SSNs
 	#   into the list.
 	# Example for redefining this variable... (huge sets are handled easily)
-	#   redef SSN_list = {"264439985", "351669087"};
+	#   redef SSN::SSN_list = {"264439985", "351669087"};
 	const SSN_list: set[string] &redef;
 
 	# As commented above, set this to T if you are using hashed SSNs in your 
