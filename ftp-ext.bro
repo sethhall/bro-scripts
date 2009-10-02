@@ -13,7 +13,7 @@ export {
 		mimetype: string &default="";
 	};
 	
-	global ftp_ext_sessions: table[conn_id] of ftp_ext_session_info;
+	global ftp_ext_sessions: table[conn_id] of ftp_ext_session_info &write_expire=1min;
 }
 
 function new_ftp_ext_session(): ftp_ext_session_info
@@ -27,13 +27,14 @@ event ftp_request(c: connection, command: string, arg: string) &priority=10
 	if ( c$id !in ftp_ext_sessions ) 
 		ftp_ext_sessions[c$id] = new_ftp_ext_session();
 		
-	if ( command == "PASS" )
-		ftp_ext_sessions[c$id]$password=arg;
+	local sess = ftp_sessions[c$id];
+	local sess_ext = ftp_ext_sessions[c$id];
 	
-	if ( command == "RETR" )
+	if ( command == "PASS" )
+		sess_ext$password=arg;
+	
+	if ( command == "RETR" || command == "STOR" )
 		{
-		local sess = ftp_sessions[c$id];
-		local sess_ext = ftp_ext_sessions[c$id];
 		local userpass = (sess$anonymous_login) ? 
 							fmt("%s:%s", sess$user, sess_ext$password) :
 							sess$user;
