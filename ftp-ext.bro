@@ -35,10 +35,11 @@ event ftp_request(c: connection, command: string, arg: string) &priority=10
 	
 	if ( command == "RETR" || command == "STOR" )
 		{
-		local userpass = ( /^(anonymous|ftp)$/ in sess$user ) ?
+		local userpass = ( sess$user == /^(anonymous|ftp)$/ ) ?
 							fmt("%s:%s", sess$user, sess_ext$password) :
 							sess$user;
-		sess_ext$url = fmt("ftp://%s@%s%s", userpass, c$id$resp_h, absolute_path(sess, arg));
+		local pathfile = sub(absolute_path(sess, arg), /<unknown>/, "/.");
+		sess_ext$url = fmt("ftp://%s@%s%s", userpass, c$id$resp_h, pathfile);
 		print ftp_ext_log, cat_sep("\t", "\\N",
 						sess$request_t,
 						c$id$orig_h, fmt("%d", c$id$orig_p),
