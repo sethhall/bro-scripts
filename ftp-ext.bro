@@ -35,7 +35,7 @@ event ftp_request(c: connection, command: string, arg: string) &priority=10
 	
 	if ( command == "RETR" || command == "STOR" )
 		{
-		local userpass = (sess$anonymous_login) ? 
+		local userpass = ( /^(anonymous|ftp)$/ in sess$user ) ?
 							fmt("%s:%s", sess$user, sess_ext$password) :
 							sess$user;
 		sess_ext$url = fmt("ftp://%s@%s%s", userpass, c$id$resp_h, absolute_path(sess, arg));
