@@ -95,19 +95,15 @@ event check_ssh_connection(c: connection, done: bool)
 		return;
 	
 	local versions = active_ssh_conns[c$id];
-	local status = "";
+	local status = "failure";
 	local direction = is_local_addr(c$id$orig_h) ? "to" : "from";
 	local location: geo_location;
 	# Need to give these values defaults in bro.init.
 	location$country_code=""; location$region=""; location$city=""; location$latitude=0.0; location$longitude=0.0;
-	if ( (log_geodata_on_failure && status == "failure") ||
-	     status == "success" )
-		location = (direction == "to") ? lookup_location(c$id$resp_h) : lookup_location(c$id$orig_h);
 	
 	if ( done && c$resp$size < authentication_data_size ) 
 		{
 		# presumed failure
-		status = "failure";
 
 		# Track the number of rejections
 		if ( !(c$id$orig_h in ignore_guessers &&
@@ -172,7 +168,13 @@ event check_ssh_connection(c: connection, done: bool)
 		        $msg="During byte counting in extended SSH analysis, an overly large value was seen.",
 		        $sub=fmt("%d",c$resp$size)]);
 		}
-
+		
+	if ( (log_geodata_on_failure && status == "failure") ||
+	     status == "success" )
+		{
+		location = (direction == "to") ? lookup_location(c$id$resp_h) : lookup_location(c$id$orig_h);
+		}
+		
 	print ssh_ext_log, cat_sep("\t", "\\N", c$start_time,
 				c$id$orig_h, fmt("%d", c$id$orig_p),
 				c$id$resp_h, fmt("%d", c$id$resp_p),
