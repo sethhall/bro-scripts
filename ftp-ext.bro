@@ -50,19 +50,19 @@ event ftp_request(c: connection, command: string, arg: string) &priority=10
 		}
 	}
 	
-event ftp_reply(c: connection, code: count, msg: string, cont_resp: bool)
-	{
-	#TODO: include reply in logged message
-	local reply = "";
-	if ( code in ftp_replies )
-		 reply = ftp_replies[code];
-		
-	print code;
-	print reply;
-	}
-	
-event file_transferred(c: connection, prefix: string, descr: string, mime_type: string)
-	{
-	print descr;
-	}
+#event ftp_reply(c: connection, code: count, msg: string, cont_resp: bool)
+#	{
+#	#TODO: include reply in logged message
+#	local reply = "";
+#	if ( code in ftp_replies )
+#		 reply = ftp_replies[code];
+#		
+#	print code;
+#	print reply;
+#	}
+#	
+#event file_transferred(c: connection, prefix: string, descr: string, mime_type: string)
+#	{
+#	print descr;
+#	}
 
