@@ -28,7 +28,7 @@ export {
 	#   Note that if you choose All or Remote, it will indiscriminately log 
 	#   your user's host HTTP requests.
 	# Choices are: LocalHosts, RemoteHosts, AllHosts
-	const log_requests_toward: Hosts = LocalHosts &redef;
+	const log_requests_toward: Hosts = AllHosts &redef;
 	
 	# This is list of subnets containing web servers that you'd like to log their
 	# traffic regardless of the "log_requests_toward" variable.

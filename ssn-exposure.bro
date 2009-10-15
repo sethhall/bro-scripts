@@ -24,7 +24,8 @@ export {
 	};
 
 	# The threshold of SSNs that you want to qualify as a mass disclosure.
-	# This allows you to only alarm on more significant disclosures (instead of people sending their own SSN).
+	# This allows you to only alarm on more significant disclosures 
+	#  (instead of people sending their own SSN).
 	# NOT CURRENTLY WORKING!
 	const mass_exposure_num = 5;
 
@@ -149,22 +150,3 @@ function validate_ssn_match(state: signature_state, data: string): bool
 
 	return check_ssns(state$conn, data);
 	}
-	
-# Change this to only run when not analyzing traffic.
-#   Consider it a test for this script.
-#event bro_init()
-#	{
-#	
-#	local blah = "GET as df12345-6789 ads 100000000 f asdf asd f 000287-76-2154f this is a test";
-#	
-#	local ssns = find_ssns(blah);
-#	for ( i in ssns )
-#		{
-#		print fmt("Checking on %s", ssns[i]);
-#		if ( md5_hash(ssns[i]) in SSN_list )
-#			{
-#			print fmt("  %s - Found it! (%s)", ssns[i], md5_hash(ssns[i]));
-#			}
-#		}
-#	
-#	}

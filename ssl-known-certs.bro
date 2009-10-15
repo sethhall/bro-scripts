@@ -16,7 +16,8 @@ export {
 event ssl_certificate(c: connection, cert: X509, is_server: bool)
 	{
 	# The ssl analyzer doesn't do this yet, so let's do it here.
-	add c$service["SSL"];
+	#add c$service["SSL"];
+	event protocol_confirmation(c, ANALYZER_SSL, 0);
 	
 	if ( !addr_matches_hosts(c$id$resp_h, logged_hosts) )
 		return;
