@@ -14,7 +14,6 @@ type smtp_counter: record {
  total: count;
  connects: set[conn_id];
  rej_conns: set[conn_id];
- recipients: string;
 };
 
 export {
@@ -51,7 +50,7 @@ event smtp_reply(c: connection, is_orig: bool, code: count, cmd: string,
  {
    local bar: set[conn_id];
    local blarg: set[conn_id];
-   smtp_status_comparison[c$id$orig_h] = [$rejects=0, $total=0, $connects=bar, $rej_conns=blarg, $recipients=""];
+   smtp_status_comparison[c$id$orig_h] = [$rejects=0, $total=0, $connects=bar, $rej_conns=blarg];
  }
 
  # Set the smtp_counter to the local var "foo"
@@ -62,12 +61,6 @@ event smtp_reply(c: connection, is_orig: bool, code: count, cmd: string,
  {
    ++foo$rejects;
    local session = smtp_sessions[c$id];
-   if( foo$recipients == "" )
-   {
-     foo$recipients = session$recipients;
-   } else if (session$recipients != "") {
-     foo$recipients = cat(foo$recipients, ",", session$recipients);
-   }
    add foo$rej_conns[c$id];
  }
 
@@ -84,7 +77,7 @@ event smtp_reply(c: connection, is_orig: bool, code: count, cmd: string,
      if ( host in local_mail )
        NOTICE([$note=SMTP_StrangeRejectBehavior, $msg=fmt("%s is rejecting a high percentage of mail", host), $sub=fmt("sent: %d rejected: %d percent", foo$total, percent), $conn=c]);
      else if ( is_local_addr(host) ) 
-       NOTICE([$note=SMTP_PossibleInternalSpam, $msg=fmt("%s appears to be spamming", host), $sub=fmt("sent: %d rejected: %d percent mailto: %s", foo$total, percent, foo$recipients), $conn=c]);
+       NOTICE([$note=SMTP_PossibleInternalSpam, $msg=fmt("%s appears to be spamming", host), $sub=fmt("sent: %d rejected: %d percent", foo$total, percent), $conn=c]);
      else 
        NOTICE([$note=SMTP_PossibleSpam, $msg=fmt("%s appears to be spamming", host), $sub=fmt("sent: %d rejected: %d percent", foo$total, percent), $conn=c]);
    }
