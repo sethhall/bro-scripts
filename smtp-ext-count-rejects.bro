@@ -75,7 +75,7 @@ event smtp_reply(c: connection, is_orig: bool, code: count, cmd: string,
    local percent = (foo$rejects*100) / foo$total;
    if ( percent >= spam_percent ) {
      if ( host in local_mail )
-       NOTICE([$note=SMTP_StrangeRejectBehavior, $msg=fmt("%s is rejecting a high percentage of mail", host), $sub=fmt("sent: %d rejected: %d percent", foo$total, percent), $conn=c]);
+       NOTICE([$note=SMTP_StrangeRejectBehavior, $msg=fmt("a high percentage of mail from %s is being rejected", host), $sub=fmt("sent: %d rejected: %d percent", foo$total, percent), $conn=c]);
      else if ( is_local_addr(host) ) 
        NOTICE([$note=SMTP_PossibleInternalSpam, $msg=fmt("%s appears to be spamming", host), $sub=fmt("sent: %d rejected: %d percent", foo$total, percent), $conn=c]);
      else 
