@@ -58,7 +58,7 @@ export {
 #redef notice_policy += {
 #	# Send email if a successful ssh login happens from or to a watched country
 #	[$pred(n: notice_info) = 
-#		{ return (n$note == SSH::SSH_Login && n$sub in watched_countries); },
+#		{ return (n$note == SSH::SSH_Login && n$sub in SSH::watched_countries); },
 #	 $result = NOTICE_EMAIL],
 #
 #	# Send email if a password guesser logs in successfully anywhere
