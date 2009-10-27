@@ -68,7 +68,10 @@ type session_info: record {
 	path: string &default="";
 	current_header: string &default="";
 };
-	
+
+# Define the generic smtp-ext event that can be handled from other scripts
+event smtp_ext(cl: session_info);
+
 function default_session_info(): session_info
 	{
 	local tmp: set[string] = set();
@@ -210,6 +213,9 @@ function end_smtp_extended_logging(c: connection)
 		                            conn_log$last_reply, 
 		                            conn_log$x_originating_ip,
 		                            conn_log$path);
+		
+	event smtp_ext(conn_log);
+
 	delete conn_info[id];
 	delete smtp_received_finished[id];
 	}
