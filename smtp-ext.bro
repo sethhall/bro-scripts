@@ -70,7 +70,7 @@ type session_info: record {
 };
 
 # Define the generic smtp-ext event that can be handled from other scripts
-event smtp_ext(id: conn_id, cl: session_info);
+global smtp_ext: event(id: conn_id, cl: session_info);
 
 function default_session_info(): session_info
 	{
