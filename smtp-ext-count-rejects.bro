@@ -48,8 +48,8 @@ event smtp_reply(c: connection, is_orig: bool, code: count, cmd: string,
 {
  if ( c$id$orig_h !in smtp_status_comparison ) 
  {
-   local bar: set[conn_id];
-   local blarg: set[conn_id];
+   local bar: set[conn_id] &create_expire=1m;
+   local blarg: set[conn_id] &create_expire=1m;
    smtp_status_comparison[c$id$orig_h] = [$rejects=0, $total=0, $connects=bar, $rej_conns=blarg];
  }
 
