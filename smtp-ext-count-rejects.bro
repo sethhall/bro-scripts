@@ -12,8 +12,6 @@ module SMTP;
 type smtp_counter: record {
  rejects: count;
  total: count;
- connects: set[conn_id];
- rej_conns: set[conn_id];
 };
 
 export {
@@ -48,27 +46,16 @@ event smtp_reply(c: connection, is_orig: bool, code: count, cmd: string,
 {
  if ( c$id$orig_h !in smtp_status_comparison ) 
  {
-   local bar: set[conn_id] &create_expire=1m;
-   local blarg: set[conn_id] &create_expire=1m;
-   smtp_status_comparison[c$id$orig_h] = [$rejects=0, $total=0, $connects=bar, $rej_conns=blarg];
+   smtp_status_comparison[c$id$orig_h] = [$rejects=0, $total=0];
  }
 
  # Set the smtp_counter to the local var "foo"
  local foo = smtp_status_comparison[c$id$orig_h];
 
- if ( code in smtp_reject_codes &&
-           c$id !in foo$rej_conns )
- {
+ if ( code in smtp_reject_codes)
    ++foo$rejects;
-   local session = smtp_sessions[c$id];
-   add foo$rej_conns[c$id];
- }
 
- if ( c$id !in foo$connects ) 
- {
-   ++foo$total;
-   add foo$connects[c$id];
- }
+ ++foo$total;
 
  local host = c$id$orig_h;
  if ( foo$total >= spam_threshold ) {
