@@ -1,6 +1,26 @@
 @load smtp
 @load global-ext
 
+type smtp_ext_session_info: record {
+	msg_id: string &default="";
+	in_reply_to: string &default="";
+	helo: string &default="";
+	mailfrom: string &default="";
+	rcptto: set[string];
+	date: string &default="";
+	from: string &default="";
+	to: set[string];
+	reply_to: string &default="";
+	subject: string &default="";
+	x_originating_ip: string &default="";
+	received_from_originating_ip: string &default="";
+	last_reply: string &default=""; # last message the server sent to the client
+	files: string &default="";
+	path: string &default="";
+	current_header: string &default="";
+};
+
+
 module SMTP;
 
 export {
@@ -50,36 +70,17 @@ export {
 	  | /intercept\.datapacket\.net\// &redef;
 }
 
-type session_info: record {
-	msg_id: string &default="";
-	in_reply_to: string &default="";
-	helo: string &default="";
-	mailfrom: string &default="";
-	rcptto: set[string];
-	date: string &default="";
-	from: string &default="";
-	to: set[string];
-	reply_to: string &default="";
-	subject: string &default="";
-	x_originating_ip: string &default="";
-	received_from_originating_ip: string &default="";
-	last_reply: string &default=""; # last message the server sent to the client
-	files: string &default="";
-	path: string &default="";
-	current_header: string &default="";
-};
-
 # Define the generic smtp-ext event that can be handled from other scripts
-global smtp_ext: event(id: conn_id, cl: session_info);
+global smtp_ext: event(id: conn_id, cl: smtp_ext_session_info);
 
-function default_session_info(): session_info
+function default_smtp_ext_session_info(): smtp_ext_session_info
 	{
 	local tmp: set[string] = set();
 	local tmp2: set[string] = set();
 	return [$rcptto=tmp, $to=tmp2];
 	}
 # TODO: setting a default function doesn't seem to be working correctly here.
-global conn_info: table[conn_id] of session_info &read_expire=4mins;
+global conn_info: table[conn_id] of smtp_ext_session_info &read_expire=4mins;
 
 global in_received_from_headers: set[conn_id] &create_expire = 2min;
 global smtp_received_finished: set[conn_id] &create_expire = 2min;
@@ -265,12 +266,12 @@ event smtp_request(c: connection, is_orig: bool, command: string, arg: string) &
 		{
 		local tmp_helo = conn_info[id]$helo;
 		end_smtp_extended_logging(c);
-		conn_info[id] = default_session_info();
+		conn_info[id] = default_smtp_ext_session_info();
 		conn_info[id]$helo = tmp_helo;
 		}
 		
 	if ( id !in conn_info )  
-		conn_info[id] = default_session_info();
+		conn_info[id] = default_smtp_ext_session_info();
 	local conn_log = conn_info[id];
 	
 	if ( /^([hH]|[eE]){2}[lL][oO]/ in command )
