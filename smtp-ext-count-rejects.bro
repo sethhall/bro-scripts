@@ -6,8 +6,8 @@
 module SMTP;
 
 type smtp_counter: record {
-	rejects: count;
-	total: count;
+	rejects: count &default=0;
+	total: count &default=0;
 };
 
 export {
@@ -20,55 +20,70 @@ export {
 	const spam_percent = 30 &redef;
 	
 	# These are smtp status codes that are considered "rejected".
-	const smtp_reject_codes: set[count] = {
+	const bad_address_reject_codes: set[count] = {
 		501, # Bad sender address syntax
 		550, # Requested action not taken: mailbox unavailable
 		551, # User not local; please try <forward-path>
 		553, # Requested action not taken: mailbox name not allowed
-		554, # Transaction failed
 	};
 	
 	redef enum Notice += {
 		SMTP_PossibleSpam, # Host sending mail *to* internal hosts is suspicious
-		SMTP_PossibleInternalSpam, # Internal host seems to be spamming
-		SMTP_StrangeRejectBehavior, # Local mail server is getting high numbers of rejects 
+		SMTP_StrangeRejectBehavior, # Local mail server is getting high numbers of rejects
 	};
 	
 	# This variable keeps track of the number of rejected and accepted 
-	# RCPT TO's a host is doing and receiving per hour.
+	# RCPT TO's a host has per hour.
 	global reject_counter: table[addr] of smtp_counter &create_expire=1hr &redef;
+	
+	# Reduce the volume of notices raised by filtering out host that have 
+	# already been detected as having too many rejected RCPT TOs.
+	global notified_reject_spammers: set[addr] &create_expire=1hr &redef;
 }
 
 event smtp_reply(c: connection, is_orig: bool, code: count, cmd: string,
                  msg: string, cont_resp: bool)
 	{
-	if ( c$id$orig_h !in reject_counter ) 
-		reject_counter[c$id$orig_h] = [$rejects=0, $total=0];
-	
-	# Set the smtp_counter to the local var "foo"
-	local foo = reject_counter[c$id$orig_h];
-	
-	if ( code in smtp_reject_codes)
-		++foo$rejects;
-	
-	if ( /^([hH]|[eE]){2}[lL][oO]/ in cmd )
-		++foo$total;
-	
-	local host = c$id$orig_h;
-	if ( foo$total >= spam_threshold ) 
+	# If this is a continued response, it could be something like
+	# the multiline rejections that gmail gives.  We only want to count
+	# the first rejection in that case.
+	if ( cont_resp ) return;
+		
+	if ( c$id$orig_h !in reject_counter )
 		{
-		local percent = (foo$rejects*100) / foo$total;
-		if ( percent >= spam_percent ) 
+		local t: smtp_counter;
+		reject_counter[c$id$orig_h] = t;
+		}
+	# Set the smtp_counter to the local var "sc"
+	local sc = reject_counter[c$id$orig_h];
+	
+	# Whenever a "RCPT TO" is done, we add that to the total.
+	if ( /^[rR][cC][pP][tT]/ in cmd )
+		{
+		++sc$total;
+		if ( code in bad_address_reject_codes )
+			++sc$rejects;
+		}
+	
+	if ( sc$total >= spam_threshold )
+		{
+		local percent = (sc$rejects*100) / sc$total;
+		local host = c$id$orig_h;
+		if ( percent >= spam_percent && 
+			 host !in notified_reject_spammers )
 			{
+			local notice_type = SMTP_PossibleSpam;
 @ifdef ( local_mail )
 			if ( host in local_mail )
-				NOTICE([$note=SMTP_StrangeRejectBehavior, $msg=fmt("a high percentage of mail from %s is being rejected", host), $sub=fmt("sent: %d rejected: %d percent", foo$total, percent), $conn=c]);
-			else 
+				notice_type = SMTP_StrangeRejectBehavior;
 @endif
-			if ( is_local_addr(host) ) 
-				NOTICE([$note=SMTP_PossibleInternalSpam, $msg=fmt("%s appears to be spamming", host), $sub=fmt("sent: %d rejected: %d percent", foo$total, percent), $conn=c]);
-			else 
-				NOTICE([$note=SMTP_PossibleSpam, $msg=fmt("%s appears to be spamming", host), $sub=fmt("sent: %d rejected: %d percent", foo$total, percent), $conn=c]);
+			NOTICE([$note=notice_type,
+			        $msg=fmt("%s is having a large number of attempted recipients rejected", host),
+			        $sub=fmt("attempted: %d rejected: %d percent",
+			        sc$total, percent),
+			        $conn=c]);
+			
+			add notified_reject_spammers[host];
 			}
 		}
 	}
