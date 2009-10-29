@@ -11,13 +11,13 @@ type smtp_counter: record {
 };
 
 export {
-	# The idea for this is that if a host makes more than spam_threshold 
-	# smtp connections per hour of which at least spam_percent of those are
+	# The idea for this is that if a host makes more than reject_threshold 
+	# smtp connections per hour of which at least reject_percent of those are
 	# rejected and the host is not a known mail sending host, then it's likely 
 	# sending spam or viruses.
 	#
-	const spam_threshold = 300 &redef;
-	const spam_percent = 30 &redef;
+	const reject_threshold = 100 &redef;
+	const reject_percent = 30 &redef;
 	
 	# These are smtp status codes that are considered "rejected".
 	const bad_address_reject_codes: set[count] = {
@@ -25,6 +25,7 @@ export {
 		550, # Requested action not taken: mailbox unavailable
 		551, # User not local; please try <forward-path>
 		553, # Requested action not taken: mailbox name not allowed
+		550, # Rejected
 	};
 	
 	redef enum Notice += {
@@ -58,32 +59,32 @@ event smtp_reply(c: connection, is_orig: bool, code: count, cmd: string,
 	local sc = reject_counter[c$id$orig_h];
 	
 	# Whenever a "RCPT TO" is done, we add that to the total.
-	if ( /^[rR][cC][pP][tT]/ in cmd )
+	if ( /^([rR][cC][pP][tT]|[mM][aA][iI][lL])/ in cmd )
 		{
 		++sc$total;
 		if ( code in bad_address_reject_codes )
 			++sc$rejects;
-		}
 	
-	if ( sc$total >= spam_threshold )
-		{
-		local percent = (sc$rejects*100) / sc$total;
-		local host = c$id$orig_h;
-		if ( percent >= spam_percent && 
-			 host !in notified_reject_spammers )
+		if ( sc$total >= reject_threshold )
 			{
-			local notice_type = SMTP_PossibleSpam;
+			local percent = (sc$rejects*100) / sc$total;
+			local host = c$id$orig_h;
+			if ( percent >= reject_percent && 
+				 host !in notified_reject_spammers )
+				{
+				local notice_type = SMTP_PossibleSpam;
 @ifdef ( local_mail )
-			if ( host in local_mail )
-				notice_type = SMTP_StrangeRejectBehavior;
+				if ( host in local_mail )
+					notice_type = SMTP_StrangeRejectBehavior;
 @endif
-			NOTICE([$note=notice_type,
-			        $msg=fmt("%s is having a large number of attempted recipients rejected", host),
-			        $sub=fmt("attempted: %d rejected: %d percent",
-			        sc$total, percent),
-			        $conn=c]);
+				NOTICE([$note=notice_type,
+				        $msg=fmt("%s is having a large number of attempted recipients rejected", host),
+				        $sub=fmt("attempted: %d rejected: %d percent",
+				        sc$total, percent),
+				        $conn=c]);
 			
-			add notified_reject_spammers[host];
+				add notified_reject_spammers[host];
+				}
 			}
 		}
 	}
