@@ -15,10 +15,18 @@ type smtp_ext_session_info: record {
 	subject: string &default="";
 	x_originating_ip: string &default="";
 	received_from_originating_ip: string &default="";
+	first_received: string &default="";
+	second_received: string &default="";
 	last_reply: string &default=""; # last message the server sent to the client
-	files: string &default="";
+	files: set[string];
 	path: string &default="";
+	is_webmail: bool &default=F; # This is not being set yet.
+	agent: string &default="";
+	
+	# These are used during processing and are likely less useful.
 	current_header: string &default="";
+	in_received_from_headers: bool &default=F;
+	received_finished: bool &default=F;
 };
 
 # Define the generic smtp-ext event that can be handled from other scripts
@@ -69,14 +77,12 @@ function default_smtp_ext_session_info(): smtp_ext_session_info
 	{
 	local tmp: set[string] = set();
 	local tmp2: set[string] = set();
-	return [$rcptto=tmp, $to=tmp2];
+	local tmp3: set[string] = set();
+	return [$rcptto=tmp, $to=tmp2, $files=tmp3];
 	}
 
 # TODO: setting a default function doesn't seem to be working correctly here.
 global conn_info: table[conn_id] of smtp_ext_session_info &read_expire=4mins;
-
-global in_received_from_headers: set[conn_id] &create_expire = 2min;
-global smtp_received_finished: set[conn_id] &create_expire = 2min;
 
 # Examples for how to handle notices from this script.
 #     (define these in a local script)...
@@ -140,7 +146,6 @@ function end_smtp_extended_logging(c: connection)
 	event smtp_ext(id, conn_log);
 
 	delete conn_info[id];
-	delete smtp_received_finished[id];
 	}
 
 event smtp_reply(c: connection, is_orig: bool, code: count, cmd: string,
@@ -221,10 +226,7 @@ event smtp_data(c: connection, is_orig: bool, data: string) &priority=-5
 		if ( /^[cC][oO][nN][tT][eE][nN][tT]-[dD][iI][sS].*[fF][iI][lL][eE][nN][aA][mM][eE]/ in data )
 			{
 			data = sub(data, /^.*[fF][iI][lL][eE][nN][aA][mM][eE]=/, "");
-			if ( conn_info[id]$files == "" )
-				conn_info[id]$files = data;
-			else
-				conn_info[id]$files += fmt(", %s", data);
+			add conn_info[id]$files[data];
 			}
 		return;
 		}
@@ -244,6 +246,8 @@ event smtp_data(c: connection, is_orig: bool, data: string) &priority=-5
 			conn_log$from += data;
 		else if ( conn_log$current_header == "reply-to" )
 			conn_log$reply_to += data;
+		else if ( conn_log$current_header == "agent" )
+			conn_log$agent += data;		
 		return;
 		}
 	conn_log$current_header = "";
@@ -253,6 +257,20 @@ event smtp_data(c: connection, is_orig: bool, data: string) &priority=-5
 		conn_log$msg_id = split1(data, /:[[:blank:]]*/)[2];
 		conn_log$current_header = "message-id";
 		}
+
+	else if ( /^[rR][eE][cC][eE][iI][vV][eE][dD]:/ in data )
+		{
+		conn_log$second_received = conn_log$first_received;
+                conn_log$first_received = split1(data, /:[[:blank:]]*/)[2];
+                conn_log$current_header = "received";
+
+		# Fill in the second value in case there is only one hop in the message.
+		if ( conn_log$second_received == "" )
+			{
+			conn_log$second_received = conn_log$first_received;
+			}
+		}
+	
 	else if ( /^[iI][nN]-[rR][eE][pP][lL][yY]-[tT][oO]:/ in data )
 		{
 		conn_log$in_reply_to = split1(data, /:[[:blank:]]*/)[2];
@@ -295,6 +313,13 @@ event smtp_data(c: connection, is_orig: bool, data: string) &priority=-5
 		conn_log$current_header = "x-originating-ip";
 		}
 	
+	else if ( /^[xX]-[mM][aA][iI][lL][eE][rR]:[[:blank:]]/ | 
+	          /^[uU][sS][eE][rR]-[aA][gG][eE][nN][tT]:[[:blank:]]/ in data )
+		{
+		conn_log$agent = split1(data, /:[[:blank:]]*/)[2];
+		conn_log$current_header = "agent";
+		}
+	
 	}
 	
 # This event handler builds the "Received From" path by reading the 
@@ -305,18 +330,21 @@ event smtp_data(c: connection, is_orig: bool, data: string)
 
 	if ( id !in conn_info ||
 		 id !in smtp_sessions ||
-		 !smtp_sessions[id]$in_header || 
-		 id in smtp_received_finished)
+		 !smtp_sessions[id]$in_header )
 		return;
 
 	local conn_log = conn_info[id];
+	
+	# If we've decided that we're done watching the received headers, we're done.
+	if ( conn_log$received_finished )
+		return;
 
 	if ( /^[rR][eE][cC][eE][iI][vV][eE][dD]:/ in data ) 
-		add in_received_from_headers[id];
+		conn_log$in_received_from_headers = T;
 	else if ( /^[[:blank:]]/ !in data )
-		delete in_received_from_headers[id];
+		conn_log$in_received_from_headers = F;
 
-	if ( id in in_received_from_headers ) # currently seeing received from headers
+	if ( conn_log$in_received_from_headers ) # currently seeing received from headers
 		{
 		local text_ip = find_address_in_smtp_header(data);
 
@@ -336,7 +364,7 @@ event smtp_data(c: connection, is_orig: bool, data: string)
 		     ip !in private_address_space )
 			{
 			ellipsis = "... ";
-			add smtp_received_finished[id];
+			conn_log$received_finished=T;
 			}
 
 		if (conn_log$path == "")
@@ -344,8 +372,8 @@ event smtp_data(c: connection, is_orig: bool, data: string)
 		else
 			conn_log$path = fmt("%s%s -> %s", ellipsis, ip, conn_log$path);
 		}
-	else if ( !smtp_sessions[id]$in_header && id !in smtp_received_finished ) 
-		add smtp_received_finished[id];
+	else if ( !smtp_sessions[id]$in_header && !conn_log$received_finished ) 
+		conn_log$received_finished=T;
 	}
 
 event connection_finished(c: connection) &priority=5

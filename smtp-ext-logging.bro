@@ -32,9 +32,11 @@ event smtp_ext(id: conn_id, si: smtp_ext_session_info)
 		                   si$from, 
 		                   si$reply_to, 
 		                   fmt_str_set(si$to, /["']/),
-		                   gsub(si$files, /["']/, ""),
+		                   fmt_str_set(si$files, /["']/),
 		                   si$last_reply, 
 		                   si$x_originating_ip,
-		                   si$path);
+		                   si$path,
+		                   si$is_webmail,
+		                   si$agent);
 
 	}
