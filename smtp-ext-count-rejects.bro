@@ -55,7 +55,8 @@ event smtp_reply(c: connection, is_orig: bool, code: count, cmd: string,
  if ( code in smtp_reject_codes)
    ++foo$rejects;
 
- ++foo$total;
+ if ( /^([hH]|[eE]){2}[lL][oO]/ in cmd )
+     ++foo$total;
 
  local host = c$id$orig_h;
  if ( foo$total >= spam_threshold ) {
