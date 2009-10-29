@@ -13,7 +13,7 @@ export {
 
 event bro_init()
 	{
-	LOG::create_logs("ssh-ext", logging, split_log_file);
+	LOG::create_logs("ssh-ext", logging, split_log_file, T);
 	}
 
 event ssh_ext(id: conn_id, si: ssh_ext_session_info)

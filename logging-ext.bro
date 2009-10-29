@@ -5,6 +5,7 @@ export {
 	type log_info: record {
 		direction:    Direction &default=All;
 		split:        bool      &default=F;
+		raw_output:   bool      &default=F;
 		log:          file      &raw_output &optional;
 		outbound_log: file      &raw_output &optional;
 		inbound_log:  file      &raw_output &optional;
@@ -16,7 +17,7 @@ export {
 	# Utility functions
 	global choose: function(a: string, server: addr): file;
 	global open_log_files: function(a: string);
-	global create_logs: function(a: string, d: Direction, split: bool);
+	global create_logs: function(a: string, d: Direction, split: bool, raw: bool);
 
 	# This is dumb, but it helps avoid needing to duplicate code on the
 	# printing side.
@@ -52,19 +53,25 @@ function open_log_files(a: string)
 		{
 		i$inbound_log = open_log_file(cat(a,"-inbound"));
 		i$outbound_log = open_log_file(cat(a,"-outbound"));
-		enable_raw_output(i$inbound_log);
-		enable_raw_output(i$outbound_log);
+		if ( i$raw_output )
+			{
+			enable_raw_output(i$inbound_log);
+			enable_raw_output(i$outbound_log);
+			}
 		}
 	else
 		{
 		i$log = open_log_file(a);
-		enable_raw_output(i$log);
+		if ( i$raw_output )
+			{
+			enable_raw_output(i$log);
+			}
 		}
 	}
 
-function create_logs(a: string, d: Direction, split: bool)
+function create_logs(a: string, d: Direction, split: bool, raw: bool)
 	{
-	logs[a] = [$direction=d, $split=split];
+	logs[a] = [$direction=d, $split=split, $raw_output=raw];
 	}
 
 # This is a hack.  The null file is used as /dev/null by all

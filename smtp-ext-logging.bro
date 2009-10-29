@@ -13,7 +13,7 @@ export {
 
 event bro_init()
 	{
-	LOG::create_logs("smtp-ext", logging, split_log_file);
+	LOG::create_logs("smtp-ext", logging, split_log_file, T);
 	}
 
 event smtp_ext(id: conn_id, si: smtp_ext_session_info)
