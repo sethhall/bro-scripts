@@ -146,6 +146,8 @@ function conn_matches_direction(id: conn_id, d: Direction): bool
 	
 function resp_matches_hosts(ip: addr, d: Hosts): bool
 	{
+	if ( d == None ) return F;
+	
 	return ( d == AllHosts ||
 	         (d == LocalHosts && is_local_addr(ip)) ||
 	         (d == RemoteHosts && !is_local_addr(ip)) );

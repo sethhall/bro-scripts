@@ -25,7 +25,6 @@ export {
 		550, # Requested action not taken: mailbox unavailable
 		551, # User not local; please try <forward-path>
 		553, # Requested action not taken: mailbox name not allowed
-		550, # Rejected
 	};
 	
 	redef enum Notice += {

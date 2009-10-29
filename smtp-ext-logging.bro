@@ -1,3 +1,4 @@
+@load global-ext
 @load smtp-ext
 
 module SMTP;
