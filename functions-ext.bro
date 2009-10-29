@@ -123,18 +123,18 @@ function orig_matches_direction(ip: addr, d: Direction): bool
 	{
 	if ( d == None ) return F;
 
-	return ( (d == Outbound && is_local_addr(ip)) ||
-	         (d == Inbound && !is_local_addr(ip)) ||
-	         d == All );
+	return ( d == All ||
+	         (d == Outbound && is_local_addr(ip)) ||
+	         (d == Inbound && !is_local_addr(ip)) );
 	}
 	
 function resp_matches_direction(ip: addr, d: Direction): bool
 	{
 	if ( d == None ) return F;
 	
-	return ( (d == Inbound && is_local_addr(ip)) ||
-	         (d == Outbound && !is_local_addr(ip)) ||
-	         d == All );
+	return ( d == All ||
+	         (d == Inbound && is_local_addr(ip)) ||
+	         (d == Outbound && !is_local_addr(ip)) );
 	}
 
 function conn_matches_direction(id: conn_id, d: Direction): bool
@@ -146,7 +146,7 @@ function conn_matches_direction(id: conn_id, d: Direction): bool
 	
 function resp_matches_hosts(ip: addr, d: Hosts): bool
 	{
-	return ( (d == LocalHosts && is_local_addr(ip)) ||
-	         (d == RemoteHosts && !is_local_addr(ip)) ||
-	         d == AllHosts );
+	return ( d == AllHosts ||
+	         (d == LocalHosts && is_local_addr(ip)) ||
+	         (d == RemoteHosts && !is_local_addr(ip)) );
 	}
