@@ -111,7 +111,7 @@ event http_message_done(c: connection, is_orig: bool, stat: http_message_stat) &
 	local host = session_http_info[c$id]$host;
 	local url = fmt("http://%s%s", host, r$URI);
 	
-	if ( addr_matches_hosts(id$resp_h, log_requests_toward) || 
+	if ( resp_matches_hosts(id$resp_h, log_requests_toward) || 
 	     id$resp_h in ok_to_log )
 	
 		print http_ext_log, cat_sep("\t", "\\N", network_time(), 
@@ -197,7 +197,7 @@ event http_header(c: connection, is_orig: bool, name: string, value: string)
 	if ( name == "USER-AGENT" )
 		{
 		session_http_info[c$id]$user_agent = value;
-		if ( addr_matches_hosts(c$id$orig_h, log_user_agents_of) &&
+		if ( resp_matches_hosts(c$id$orig_h, log_user_agents_of) &&
 		    (c$id$orig_h !in http_remember_user_agents ||
 		     (c$id$orig_h in http_remember_user_agents && 
 		      value !in http_remember_user_agents[c$id$orig_h]) ) )

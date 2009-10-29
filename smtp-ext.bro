@@ -1,5 +1,6 @@
-@load smtp
 @load global-ext
+@load smtp
+@load notice
 
 type smtp_ext_session_info: record {
 	msg_id: string &default="";
@@ -20,12 +21,12 @@ type smtp_ext_session_info: record {
 	current_header: string &default="";
 };
 
+# Define the generic smtp-ext event that can be handled from other scripts
+global smtp_ext: event(id: conn_id, si: smtp_ext_session_info);
 
 module SMTP;
 
 export {
-	global smtp_ext_log = open_log_file("smtp-ext") &raw_output &redef;
-
 	redef enum Notice += { 
 		# Thrown when a local host receives a reply mentioning an smtp block list
 		SMTP_BL_Error_Message, 
@@ -35,13 +36,7 @@ export {
 		SMTP_Suspicious_Origination,
 	};
 	
-	# Uncomment this next line or define it in your own file to totally 
-	# disable inspection into the smtp received from headers.
-	#   Disabling supressses the suspicious_origination notice when it's 
-	#   tracked through the received from headers.
-	const smtp_capture_mail_path = 1;
-	
-	# Direction to capture the full "Received from" path. (from the Direction enum)
+	# Direction to capture the full "Received from" path. (from the Hosts enum)
 	#    RemoteHosts - only capture the path until an internal host is found.
 	#    LocalHosts - only capture the path until the external host is discovered.
 	#    AllHosts - capture the entire path.
@@ -70,21 +65,18 @@ export {
 	  | /intercept\.datapacket\.net\// &redef;
 }
 
-# Define the generic smtp-ext event that can be handled from other scripts
-global smtp_ext: event(id: conn_id, cl: smtp_ext_session_info);
-
 function default_smtp_ext_session_info(): smtp_ext_session_info
 	{
 	local tmp: set[string] = set();
 	local tmp2: set[string] = set();
 	return [$rcptto=tmp, $to=tmp2];
 	}
+
 # TODO: setting a default function doesn't seem to be working correctly here.
 global conn_info: table[conn_id] of smtp_ext_session_info &read_expire=4mins;
 
 global in_received_from_headers: set[conn_id] &create_expire = 2min;
 global smtp_received_finished: set[conn_id] &create_expire = 2min;
-global smtp_forward_paths: table[conn_id] of string &create_expire = 2min &default = "";
 
 # Examples for how to handle notices from this script.
 #     (define these in a local script)...
@@ -105,59 +97,6 @@ function find_address_in_smtp_header(header: string): string
 		return ips[1];
 	return "";
 }
-
-@ifdef( smtp_capture_mail_path )
-# This event handler builds the "Received From" path by reading the 
-# headers in the mail
-event smtp_data(c: connection, is_orig: bool, data: string)
-	{
-	local id = c$id;
-
-	if ( id !in conn_info ||
-		 id !in smtp_sessions ||
-		 !smtp_sessions[id]$in_header || 
-		 id in smtp_received_finished)
-		return;
-		
-	local conn_log = conn_info[id];
-
-	if ( /^[rR][eE][cC][eE][iI][vV][eE][dD]:/ in data ) 
-		add in_received_from_headers[id];
-	else if ( /^[[:blank:]]/ !in data )
-		delete in_received_from_headers[id];
-	
-	if ( id in in_received_from_headers ) # currently seeing received from headers
-		{
-		local text_ip = find_address_in_smtp_header(data);
-
-		if ( text_ip == "" )
-			return;
-			
-		local ip = to_addr(text_ip);
-		
-		# I don't care if mail bounces around on localhost
-		if ( ip == 127.0.0.1 ) return;
-		
-		# This overwrites each time.
-		conn_log$received_from_originating_ip = text_ip;
-		
-		local ellipsis = "";
-		if ( !addr_matches_hosts(ip, mail_path_capture) && 
-		     ip !in private_address_space )
-			{
-			ellipsis = "... ";
-			add smtp_received_finished[id];
-			}
-
-		if (conn_log$path == "")
-			conn_log$path = fmt("%s%s -> %s -> %s", ellipsis, ip, id$orig_h, id$resp_h);
-		else
-			conn_log$path = fmt("%s%s -> %s", ellipsis, ip, conn_log$path);
-		}
-	else if ( !smtp_sessions[id]$in_header && id !in smtp_received_finished ) 
-		add smtp_received_finished[id];
-	}
-@endif
 
 function end_smtp_extended_logging(c: connection)
 	{
@@ -196,25 +135,8 @@ function end_smtp_extended_logging(c: connection)
 					$conn=c]);
 			}
 		}
-
-	if ( conn_log$mailfrom != "" )
-		print smtp_ext_log, cat_sep("\t", "\\N", 
-		                            network_time(), 
-		                            id$orig_h, fmt("%d", id$orig_p), id$resp_h, fmt("%d", id$resp_p),
-		                            conn_log$helo, 
-		                            conn_log$msg_id, 
-		                            conn_log$in_reply_to, 
-		                            conn_log$mailfrom, 
-		                            fmt_str_set(conn_log$rcptto, /["'<>]|([[:blank:]].*$)/),
-		                            conn_log$date, 
-		                            conn_log$from, 
-		                            conn_log$reply_to, 
-		                            fmt_str_set(conn_log$to, /["']/),
-		                            gsub(conn_log$files, /["']/, ""),
-		                            conn_log$last_reply, 
-		                            conn_log$x_originating_ip,
-		                            conn_log$path);
-		
+	
+	# Throw the event for other scripts to handle
 	event smtp_ext(id, conn_log);
 
 	delete conn_info[id];
@@ -373,6 +295,57 @@ event smtp_data(c: connection, is_orig: bool, data: string) &priority=-5
 		conn_log$current_header = "x-originating-ip";
 		}
 	
+	}
+	
+# This event handler builds the "Received From" path by reading the 
+# headers in the mail
+event smtp_data(c: connection, is_orig: bool, data: string)
+	{
+	local id = c$id;
+
+	if ( id !in conn_info ||
+		 id !in smtp_sessions ||
+		 !smtp_sessions[id]$in_header || 
+		 id in smtp_received_finished)
+		return;
+
+	local conn_log = conn_info[id];
+
+	if ( /^[rR][eE][cC][eE][iI][vV][eE][dD]:/ in data ) 
+		add in_received_from_headers[id];
+	else if ( /^[[:blank:]]/ !in data )
+		delete in_received_from_headers[id];
+
+	if ( id in in_received_from_headers ) # currently seeing received from headers
+		{
+		local text_ip = find_address_in_smtp_header(data);
+
+		if ( text_ip == "" )
+			return;
+
+		local ip = to_addr(text_ip);
+
+		# I don't care if mail bounces around on localhost
+		if ( ip == 127.0.0.1 ) return;
+
+		# This overwrites each time.
+		conn_log$received_from_originating_ip = text_ip;
+
+		local ellipsis = "";
+		if ( !resp_matches_hosts(ip, mail_path_capture) && 
+		     ip !in private_address_space )
+			{
+			ellipsis = "... ";
+			add smtp_received_finished[id];
+			}
+
+		if (conn_log$path == "")
+			conn_log$path = fmt("%s%s -> %s -> %s", ellipsis, ip, id$orig_h, id$resp_h);
+		else
+			conn_log$path = fmt("%s%s -> %s", ellipsis, ip, conn_log$path);
+		}
+	else if ( !smtp_sessions[id]$in_header && id !in smtp_received_finished ) 
+		add smtp_received_finished[id];
 	}
 
 event connection_finished(c: connection) &priority=5

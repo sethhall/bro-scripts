@@ -1,12 +1,23 @@
 @load global-ext
 @load ssh
 @load notice
-	
+
+type ssh_ext_session_info: record {
+	start_time: time;
+	client: string &default="";
+	server: string &default="";
+	location: geo_location;
+	status: string &default="";
+	direction: string &default="";
+	resp_size: count &default=0;
+};
+
+# Define the generic ssh-ext event that can be handled from other scripts
+global ssh_ext: event(id: conn_id, si: ssh_ext_session_info);
+
 module SSH;
 
 export {
-	const ssh_ext_log = open_log_file("ssh-ext") &raw_output;
-	
 	const password_guesses_limit = 30 &redef;
 	const authentication_data_size = 5500 &redef;
 	const guessing_timeout = 30 mins;
@@ -16,13 +27,8 @@ export {
 	# Keeps track of hosts identified as guessing passwords
 	global password_guessers: set[addr] &read_expire=guessing_timeout+1hr;
 	
-	type ssh_versions: record {
-		client: string &default="";
-		server: string &default="";
-	};
-	
-	# Only monitor SSH connections for up to 15 minutes
-	global active_ssh_conns: table[conn_id] of ssh_versions &create_expire=15mins;
+	# The list of active SSH connections and the associated session info.
+	global active_ssh_conns: table[conn_id] of ssh_ext_session_info &read_expire=2mins;
 	
 	# If you want to lookup and log geoip data in the event of a failed login.
 	const log_geodata_on_failure = F &redef;
@@ -94,7 +100,7 @@ event check_ssh_connection(c: connection, done: bool)
 	if (c$resp$size < 50)
 		return;
 	
-	local versions = active_ssh_conns[c$id];
+	local ssh_conn = active_ssh_conns[c$id];
 	local status = "failure";
 	local direction = is_local_addr(c$id$orig_h) ? "to" : "from";
 	local location: geo_location;
@@ -161,7 +167,7 @@ event check_ssh_connection(c: connection, done: bool)
 				}
 			}
 		}
-	else if (c$resp$size >= 20000000) 
+	else if (c$resp$size >= 200000000) 
 		{
 		NOTICE([$note=SSH_Bytecount_Inconsistency,
 		        $conn=c,
@@ -175,13 +181,13 @@ event check_ssh_connection(c: connection, done: bool)
 		location = (direction == "to") ? lookup_location(c$id$resp_h) : lookup_location(c$id$orig_h);
 		}
 		
-	print ssh_ext_log, cat_sep("\t", "\\N", c$start_time,
-				c$id$orig_h, fmt("%d", c$id$orig_p),
-				c$id$resp_h, fmt("%d", c$id$resp_p),
-				status, direction, 
-				location$country_code, location$region,
-				versions$client, versions$server,
-				c$resp$size);
+	
+	ssh_conn$location = location;
+	ssh_conn$status = status;
+	ssh_conn$direction = direction;
+	ssh_conn$resp_size = c$resp$size;
+	
+	event ssh_ext(c$id, ssh_conn);
 
 	delete active_ssh_conns[c$id];
 	# Stop watching this connection, we don't care about it anymore.
@@ -206,7 +212,7 @@ event ssh_watcher(c: connection)
 
 	event check_ssh_connection(c, F);
 	if ( c$id in active_ssh_conns )
-		schedule +2mins { ssh_watcher(c) };
+		schedule +15secs { ssh_watcher(c) };
 	}
 	
 event ssh_client_version(c: connection, version: string)
@@ -225,8 +231,8 @@ event protocol_confirmation(c: connection, atype: count, aid: count)
 	{
 	if ( atype == ANALYZER_SSH )
 		{
-		local tmp: ssh_versions;
+		local tmp: ssh_ext_session_info;
 		active_ssh_conns[c$id]=tmp;
-		schedule +2mins { ssh_watcher(c) }; 
+		schedule +15secs { ssh_watcher(c) }; 
 		}
 	}
