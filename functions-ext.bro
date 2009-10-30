@@ -113,15 +113,14 @@ function find_ip_addresses(input: string): string_array
 	return output;
 	}
 
-
 	
 # Some enums for deciding what and when to log.
-type Direction: enum { Inbound, Outbound, All };
-type Hosts: enum { LocalHosts, RemoteHosts, AllHosts };
+type Direction: enum { Inbound, Outbound, All, Neither };
+type Hosts: enum { LocalHosts, RemoteHosts, AllHosts, NoHosts };
 
 function orig_matches_direction(ip: addr, d: Direction): bool
 	{
-	if ( d == None ) return F;
+	if ( d == Neither ) return F;
 
 	return ( d == All ||
 	         (d == Outbound && is_local_addr(ip)) ||
@@ -130,7 +129,7 @@ function orig_matches_direction(ip: addr, d: Direction): bool
 	
 function resp_matches_direction(ip: addr, d: Direction): bool
 	{
-	if ( d == None ) return F;
+	if ( d == Neither ) return F;
 	
 	return ( d == All ||
 	         (d == Inbound && is_local_addr(ip)) ||
@@ -139,14 +138,14 @@ function resp_matches_direction(ip: addr, d: Direction): bool
 
 function conn_matches_direction(id: conn_id, d: Direction): bool
 	{
-	if ( d == None ) return F;
+	if ( d == NoHosts ) return F;
 	
 	return orig_matches_direction(id$orig_h, d);
 	}
 	
 function resp_matches_hosts(ip: addr, d: Hosts): bool
 	{
-	if ( d == None ) return F;
+	if ( d == NoHosts ) return F;
 	
 	return ( d == AllHosts ||
 	         (d == LocalHosts && is_local_addr(ip)) ||
