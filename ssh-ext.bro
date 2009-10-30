@@ -181,7 +181,7 @@ event check_ssh_connection(c: connection, done: bool)
 		location = (direction == "to") ? lookup_location(c$id$resp_h) : lookup_location(c$id$orig_h);
 		}
 		
-	
+	ssh_conn$start_time = c$start_time;
 	ssh_conn$location = location;
 	ssh_conn$status = status;
 	ssh_conn$direction = direction;
