@@ -19,6 +19,7 @@ event bro_init()
 	                                      "ts",
 	                                      "orig_h", "orig_p",
 	                                      "resp_h", "resp_p",
+	                                      "status", "direction",
 	                                      "country", "region",
 	                                      "client", "server", "resp_size"));
 	
