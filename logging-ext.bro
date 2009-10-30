@@ -7,9 +7,9 @@ export {
 		split:        bool      &default=F;
 		raw_output:   bool      &default=F;
 		header:       string    &default="";
-		log:          file      &raw_output &optional;
-		outbound_log: file      &raw_output &optional;
-		inbound_log:  file      &raw_output &optional;
+		log:          file      &optional;
+		outbound_log: file      &optional;
+		inbound_log:  file      &optional;
 	};
 	
 	# Where the data for knowing how to log is stored.
@@ -88,12 +88,17 @@ function define_header(a: string, h: string)
 	}
 
 #event file_opened(f: file) &priority=10
-#	{
-#	local fn = get_file_name(f);
-#	local log_type = gsub(fn, /-(in|out)bound/, "");
-#	local i = logs[log_type];
-#	print f, i$header;
-#	}
+event rotate_interval(f: file) &priority=-1
+	{
+	local fn = get_file_name(f);
+	local log_type = gsub(fn, /-(in|out)bound/, "");
+	if ( log_type in logs )
+		{
+		local i = logs[log_type];
+		if ( i$header != "" )
+			print f, i$header;
+		}
+	}
 
 # This is a hack.  The null file is used as /dev/null by all
 # scripts using the logging framework.  The file needs to be

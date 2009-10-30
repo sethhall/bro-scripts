@@ -1,6 +1,5 @@
 @load global-ext
 @load smtp
-@load notice
 
 type smtp_ext_session_info: record {
 	msg_id: string &default="";
