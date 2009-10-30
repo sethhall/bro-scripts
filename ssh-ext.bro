@@ -110,6 +110,8 @@ event check_ssh_connection(c: connection, done: bool)
 	if ( done && c$resp$size < authentication_data_size ) 
 		{
 		# presumed failure
+		if ( log_geodata_on_failure )
+			location = (direction == "to") ? lookup_location(c$id$resp_h) : lookup_location(c$id$orig_h);
 
 		# Track the number of rejections
 		if ( !(c$id$orig_h in ignore_guessers &&
@@ -133,6 +135,7 @@ event check_ssh_connection(c: connection, done: bool)
 		{ 
 		# presumed successful login
 		status = "success";
+		location = (direction == "to") ? lookup_location(c$id$resp_h) : lookup_location(c$id$orig_h);
 
 		if ( password_rejections[c$id$orig_h] > password_guesses_limit &&
 		     c$id$orig_h !in password_guessers)
@@ -174,13 +177,7 @@ event check_ssh_connection(c: connection, done: bool)
 		        $msg="During byte counting in extended SSH analysis, an overly large value was seen.",
 		        $sub=fmt("%d",c$resp$size)]);
 		}
-		
-	if ( (log_geodata_on_failure && status == "failure") ||
-	     status == "success" )
-		{
-		location = (direction == "to") ? lookup_location(c$id$resp_h) : lookup_location(c$id$orig_h);
-		}
-		
+
 	ssh_conn$start_time = c$start_time;
 	ssh_conn$location = location;
 	ssh_conn$status = status;
