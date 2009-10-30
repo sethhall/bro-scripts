@@ -20,7 +20,8 @@ export {
 	global open_log_files: function(a: string);
 	global create_logs: function(a: string, d: Direction, split: bool, raw: bool);
 	global define_header: function(a: string, h: string);
-
+	global buffer: function(a: string, setit: bool);
+	
 	# This is dumb, but it helps avoid needing to duplicate code on the
 	# printing side.
 	const null_file: file = open_log_file("null");
@@ -42,6 +43,21 @@ function choose(a: string, server: addr): file
 	else
 		{
 		return i$log;
+		}
+	}
+	
+function buffer(a: string, setit: bool)
+	{
+	local i = logs[a];
+	
+	if ( i$split )
+		{
+		set_buf(i$inbound_log, setit);
+		set_buf(i$outbound_log, setit);
+		}
+	else
+		{
+		set_buf(i$log, setit);
 		}
 	}
 
@@ -91,7 +107,9 @@ function define_header(a: string, h: string)
 event rotate_interval(f: file) &priority=-1
 	{
 	local fn = get_file_name(f);
-	local log_type = gsub(fn, /-(in|out)bound/, "");
+	# TODO: make this not depend on the file extension being .log
+	local log_type = gsub(fn, /(-(in|out)bound)?\.log$/, "");
+	print log_type;
 	if ( log_type in logs )
 		{
 		local i = logs[log_type];
