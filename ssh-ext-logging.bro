@@ -1,3 +1,4 @@
+@load global-ext
 @load ssh-ext
 
 module SSH;
