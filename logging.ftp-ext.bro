@@ -15,6 +15,12 @@ export {
 event bro_init()
 	{
 	LOG::create_logs("ftp-ext", logging, split_log_file, T);
+	LOG::define_header("ftp-ext", cat_sep("\t", "", 
+	                                      "ts",
+	                                      "orig_h", "orig_p",
+	                                      "resp_h", "resp_p",
+	                                      "command", "url",
+	                                      "reply_code", "reply", "reply_message"));
 	}
 
 event ftp_ext(id: conn_id, si: ftp_ext_session_info)

@@ -15,6 +15,16 @@ export {
 event bro_init()
 	{
 	LOG::create_logs("smtp-ext", logging, split_log_file, T);
+	LOG::define_header("smtp-ext", cat_sep("\t", "", 
+	                                      "ts",
+	                                      "orig_h", "orig_p",
+	                                      "resp_h", "resp_p",
+	                                      "helo", "message-id", "in-reply-to", 
+	                                      "mailfrom", "rcptto",
+	                                      "date", "from", "reply_to", "to",
+	                                      "files", "last_reply", "x-originating-ip",
+	                                      "path", "is_webmail", "agent"));
+	
 	}
 
 event smtp_ext(id: conn_id, si: smtp_ext_session_info)

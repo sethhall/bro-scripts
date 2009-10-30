@@ -15,6 +15,13 @@ export {
 event bro_init()
 	{
 	LOG::create_logs("ssh-ext", logging, split_log_file, T);
+	LOG::define_header("ssh-ext", cat_sep("\t", "", 
+	                                      "ts",
+	                                      "orig_h", "orig_p",
+	                                      "resp_h", "resp_p",
+	                                      "country", "region",
+	                                      "client", "server", "resp_size"));
+	
 	}
 
 event ssh_ext(id: conn_id, si: ssh_ext_session_info)
