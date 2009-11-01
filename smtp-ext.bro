@@ -140,7 +140,7 @@ function end_smtp_extended_logging(c: connection)
 					$conn=c]);
 			}
 		}
-	
+
 	# Throw the event for other scripts to handle
 	event smtp_ext(id, conn_log);
 
@@ -237,6 +237,8 @@ event smtp_data(c: connection, is_orig: bool, data: string) &priority=-5
 		data = sub(data, /^[[:blank:]]/, "");
 		if ( conn_log$current_header == "message-id" )
 			conn_log$msg_id += data;
+		else if ( conn_log$current_header == "received" )
+			conn_log$first_received += data;
 		else if ( conn_log$in_reply_to == "in-reply-to" )
 			conn_log$in_reply_to += data;
 		else if ( conn_log$current_header == "subject" )
@@ -260,14 +262,12 @@ event smtp_data(c: connection, is_orig: bool, data: string) &priority=-5
 	else if ( /^[rR][eE][cC][eE][iI][vV][eE][dD]:/ in data )
 		{
 		conn_log$second_received = conn_log$first_received;
-                conn_log$first_received = split1(data, /:[[:blank:]]*/)[2];
-                conn_log$current_header = "received";
-
+		conn_log$first_received = split1(data, /:[[:blank:]]*/)[2];
 		# Fill in the second value in case there is only one hop in the message.
 		if ( conn_log$second_received == "" )
-			{
 			conn_log$second_received = conn_log$first_received;
-			}
+		
+		conn_log$current_header = "received";
 		}
 	
 	else if ( /^[iI][nN]-[rR][eE][pP][lL][yY]-[tT][oO]:/ in data )
