@@ -20,6 +20,15 @@ type http_ext_session_info: record {
 	full: bool &default=F;
 };
 
+function default_http_ext_session_info(): http_ext_session_info
+	{
+	local x: http_ext_session_info;
+	local tmp: set[string] = set();
+	x$start_time=network_time();
+	x$force_log_reasons=tmp;
+	return x;
+	}
+
 type http_ext_activity_count: record {
 	sql_injections: track_count;
 	sql_injection_probes: track_count;
@@ -100,15 +109,6 @@ export {
 		&redef;
 }
 
-function default_http_ext_session_info(): http_ext_session_info
-	{
-	local x: http_ext_session_info;
-	local tmp: set[string] = set();
-	x$start_time=network_time();
-	x$force_log_reasons=tmp;
-	return x;
-	}
-
 # This is called from signatures (theoretically)
 function log_post(state: signature_state, data: string): bool
 	{
@@ -143,6 +143,9 @@ event http_message_done(c: connection, is_orig: bool, stat: http_message_stat) &
 		return; 
 
 	local id = c$id;
+	if ( id !in conn_info )
+		return;
+	
 	local sess_ext = conn_info[id];
 	sess_ext$url = fmt("http://%s%s", sess_ext$host, sess_ext$uri);
 
