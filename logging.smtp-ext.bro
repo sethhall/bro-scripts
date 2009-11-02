@@ -30,6 +30,7 @@ event bro_init()
 event smtp_ext(id: conn_id, si: smtp_ext_session_info)
 	{
 	if ( si$mailfrom != "" )
+		{
 		local log = LOG::get_file("smtp-ext", id$resp_h, F);
 		print log, cat_sep("\t", "\\N",
 		                   network_time(),
@@ -49,5 +50,6 @@ event smtp_ext(id: conn_id, si: smtp_ext_session_info)
 		                   si$path,
 		                   si$is_webmail,
 		                   si$agent);
+		}
 
 	}
