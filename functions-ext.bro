@@ -108,7 +108,7 @@ function find_ip_addresses(input: string): string_array
 	for ( i in parts )
 		{
 		if ( i % 2 == 0 && is_valid_ip(parts[i]) )
-			output[i/2] = parts[i];
+			output[|output|+1] = parts[i];
 		}
 	return output;
 	}

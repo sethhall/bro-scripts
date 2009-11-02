@@ -73,6 +73,9 @@ event http_entity_data(c: connection, is_orig: bool, length: count, data: string
 	{
 	if ( !is_orig ) return;
 
+	if ( c$id !in HTTP::conn_info )
+		return;
+	
 	local si = HTTP::conn_info[c$id];
 	
 	# This shouldn't really be done in the logging script, but it avoids

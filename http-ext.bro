@@ -35,6 +35,12 @@ type http_ext_activity_count: record {
 	suspicious_posts: track_count;
 };
 
+function default_http_ext_activity_count(a:addr):http_ext_activity_count 
+	{
+	local x: http_ext_activity_count; 
+	return x; 
+	}
+
 # Define the generic http_ext events that can be handled from other scripts
 global http_ext: event(id: conn_id, si: http_ext_session_info);
 
@@ -97,8 +103,15 @@ export {
 		# more that 4 html links is also suspicious
 		/(a.href(=|%3[dD]).*){4}/ &redef;
 
-	global conn_info: table[conn_id] of http_ext_session_info &write_expire=1min;
-	global activity_counters: table[addr] of http_ext_activity_count &create_expire=1day &synchronized;
+	global conn_info: table[conn_id] of http_ext_session_info 
+		&read_expire=5mins
+		&redef;
+
+	global activity_counters: table[addr] of http_ext_activity_count 
+		&create_expire=1day 
+		&synchronized
+		&default=default_http_ext_activity_count
+		&redef;
 
 	# You can inspect this during runtime from other modules to see what
 	# user-agents a host has used.
@@ -223,6 +236,9 @@ event http_message_done(c: connection, is_orig: bool, stat: http_message_stat) &
 event http_header(c: connection, is_orig: bool, name: string, value: string)
 	{
 	if ( !is_orig ) return;
+
+	if ( c$id !in conn_info )
+		conn_info[c$id] = default_http_ext_session_info();
 
 	local ci = conn_info[c$id];
 

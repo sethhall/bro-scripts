@@ -28,6 +28,14 @@ type smtp_ext_session_info: record {
 	received_finished: bool &default=F;
 };
 
+function default_smtp_ext_session_info(): smtp_ext_session_info
+	{
+	local tmp: set[string] = set();
+	local tmp2: set[string] = set();
+	local tmp3: set[string] = set();
+	return [$rcptto=tmp, $to=tmp2, $files=tmp3];
+	}
+
 # Define the generic smtp-ext event that can be handled from other scripts
 global smtp_ext: event(id: conn_id, si: smtp_ext_session_info);
 
@@ -70,18 +78,12 @@ export {
 	  | /dyndns\.com\/.*spam/
 	  | /rbl\.knology\.net\//
 	  | /intercept\.datapacket\.net\// &redef;
+	
+	global conn_info: table[conn_id] of smtp_ext_session_info 
+		&read_expire=5mins
+		&redef;
+	
 }
-
-function default_smtp_ext_session_info(): smtp_ext_session_info
-	{
-	local tmp: set[string] = set();
-	local tmp2: set[string] = set();
-	local tmp3: set[string] = set();
-	return [$rcptto=tmp, $to=tmp2, $files=tmp3];
-	}
-
-# TODO: setting a default function doesn't seem to be working correctly here.
-global conn_info: table[conn_id] of smtp_ext_session_info &read_expire=4mins;
 
 # Examples for how to handle notices from this script.
 #     (define these in a local script)...
@@ -95,12 +97,12 @@ global conn_info: table[conn_id] of smtp_ext_session_info &read_expire=4mins;
 function find_address_in_smtp_header(header: string): string
 {
 	local ips = find_ip_addresses(header);
-		
 	if ( |ips| > 1 )
 		return ips[2];
-	if ( |ips| > 0 )
+	else if ( |ips| > 0 )
 		return ips[1];
-	return "";
+	else
+		return "";
 }
 
 function end_smtp_extended_logging(c: connection)
@@ -218,7 +220,7 @@ event smtp_data(c: connection, is_orig: bool, data: string) &priority=-5
 	local id = c$id;
 		
 	if ( id !in conn_info )
-	return; 
+		return; 
     
 	if ( !smtp_sessions[id]$in_header )
 		{
@@ -253,13 +255,13 @@ event smtp_data(c: connection, is_orig: bool, data: string) &priority=-5
 		}
 	conn_log$current_header = "";
 
-	if ( /^[mM][eE][sS][sS][aA][gG][eE]-[iI][dD]:/ in data )
+	if ( /^[mM][eE][sS][sS][aA][gG][eE]-[iI][dD]:[[:blank:]]*./ in data )
 		{
 		conn_log$msg_id = split1(data, /:[[:blank:]]*/)[2];
 		conn_log$current_header = "message-id";
 		}
 
-	else if ( /^[rR][eE][cC][eE][iI][vV][eE][dD]:/ in data )
+	else if ( /^[rR][eE][cC][eE][iI][vV][eE][dD]:[[:blank:]]*./ in data )
 		{
 		conn_log$second_received = conn_log$first_received;
 		conn_log$first_received = split1(data, /:[[:blank:]]*/)[2];
@@ -270,50 +272,54 @@ event smtp_data(c: connection, is_orig: bool, data: string) &priority=-5
 		conn_log$current_header = "received";
 		}
 	
-	else if ( /^[iI][nN]-[rR][eE][pP][lL][yY]-[tT][oO]:/ in data )
+	else if ( /^[iI][nN]-[rR][eE][pP][lL][yY]-[tT][oO]:[[:blank:]]*./ in data )
 		{
 		conn_log$in_reply_to = split1(data, /:[[:blank:]]*/)[2];
 		conn_log$current_header = "in-reply-to";
 		}
 
-	else if ( /^[dD][aA][tT][eE]:/ in data )
+	else if ( /^[dD][aA][tT][eE]:[[:blank:]]*./ in data )
 		{
 		conn_log$date = split1(data, /:[[:blank:]]*/)[2];
 		conn_log$current_header = "date";
 		}
 
-	else if ( /^[fF][rR][oO][mM]:/ in data )
+	else if ( /^[fF][rR][oO][mM]:[[:blank:]]*./ in data )
 		{
 		conn_log$from = split1(data, /:[[:blank:]]*/)[2];
 		conn_log$current_header = "from";
 		}
 
-	else if ( /^[tT][oO]:/ in data )
+	else if ( /^[tT][oO]:[[:blank:]]*./ in data )
 		{
 		add conn_log$to[split1(data, /:[[:blank:]]*/)[2]];
 		conn_log$current_header = "to";
 		}
 
-	else if ( /^[rR][eE][pP][lL][yY]-[tT][oO]:/ in data )
+	else if ( /^[rR][eE][pP][lL][yY]-[tT][oO]:[[:blank:]]*./ in data )
 		{
 		conn_log$reply_to = split1(data, /:[[:blank:]]*/)[2];
 		conn_log$current_header = "reply-to";
 		}
 
-	else if ( /^[sS][uU][bB][jJ][eE][cC][tT]:/ in data )
+	else if ( /^[sS][uU][bB][jJ][eE][cC][tT]:[[:blank:]]*./ in data )
 		{
 		conn_log$subject = split1(data, /:[[:blank:]]*/)[2];
 		conn_log$current_header = "subject";
 		}
 
-	else if ( /^[xX]-[oO][rR][iI][gG][iI][nN][aA][tT][iI][nN][gG]-[iI][pP]:/ in data )
+	else if ( /^[xX]-[oO][rR][iI][gG][iI][nN][aA][tT][iI][nN][gG]-[iI][pP]:[[:blank:]]*./ in data )
 		{
-		conn_log$x_originating_ip = find_ip_addresses(data)[1];
+		local addresses = find_ip_addresses(data);
+		if ( |addresses| > 0 )
+			conn_log$x_originating_ip = addresses[1];
+		else
+			conn_log$x_originating_ip = data;
 		conn_log$current_header = "x-originating-ip";
 		}
 	
-	else if ( /^[xX]-[mM][aA][iI][lL][eE][rR]:[[:blank:]]/ | 
-	          /^[uU][sS][eE][rR]-[aA][gG][eE][nN][tT]:[[:blank:]]/ in data )
+	else if ( /^[xX]-[mM][aA][iI][lL][eE][rR]:[[:blank:]]*./ | 
+	          /^[uU][sS][eE][rR]-[aA][gG][eE][nN][tT]:[[:blank:]]*./ in data )
 		{
 		conn_log$agent = split1(data, /:[[:blank:]]*/)[2];
 		conn_log$current_header = "agent";
