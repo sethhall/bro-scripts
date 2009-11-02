@@ -27,12 +27,12 @@ event bro_init()
 
 event ssh_ext(id: conn_id, si: ssh_ext_session_info)
 	{
-	local log = LOG::choose("ssh-ext", id$resp_h);
+	local log = LOG::get_file("ssh-ext", id$resp_h, F);
 
 	print log, cat_sep("\t", "\\N", 
 	                   si$start_time,
-	                   id$orig_h, fmt("%d", id$orig_p),
-	                   id$resp_h, fmt("%d", id$resp_p),
+	                   id$orig_h, port_to_count(id$orig_p),
+	                   id$resp_h, port_to_count(id$resp_p),
 	                   si$status, si$direction, 
 	                   si$location$country_code, si$location$region,
 	                   si$client, si$server,

@@ -7,6 +7,7 @@ export {
 	# If set to T, this will split inbound and outbound transactions
 	# into separate files.  F merges everything into a single file.
 	const split_log_file = F &redef;
+	
 	# Which mail transactions to log.
 	# Choices are: Inbound, Outbound, All
 	const logging = All &redef;
@@ -24,16 +25,15 @@ event bro_init()
 	                                      "date", "from", "reply_to", "to",
 	                                      "files", "last_reply", "x-originating-ip",
 	                                      "path", "is_webmail", "agent"));
-	
 	}
 
 event smtp_ext(id: conn_id, si: smtp_ext_session_info)
 	{
-	local log = LOG::choose("smtp-ext", id$resp_h);
 	if ( si$mailfrom != "" )
+		local log = LOG::get_file("smtp-ext", id$resp_h, F);
 		print log, cat_sep("\t", "\\N",
 		                   network_time(),
-		                   id$orig_h, fmt("%d", id$orig_p), id$resp_h, fmt("%d", id$resp_p),
+		                   id$orig_h, port_to_count(id$orig_p), id$resp_h, port_to_count(id$resp_p),
 		                   si$helo,
 		                   si$msg_id,
 		                   si$in_reply_to,

@@ -16,7 +16,7 @@ export {
 	const logs: table[string] of log_info &redef;
 
 	# Utility functions
-	global choose: function(a: string, server: addr): file;
+	global get_file: function(a: string, server: addr, force_log: bool): file;
 	global open_log_files: function(a: string);
 	global create_logs: function(a: string, d: Direction, split: bool, raw: bool);
 	global define_header: function(a: string, h: string);
@@ -27,12 +27,12 @@ export {
 	const null_file: file = open_log_file("null");
 }
 
-function choose(a: string, server: addr): file
+function get_file(a: string, server: addr, force_log: bool): file
 	{
 	local i = logs[a];
-	if ( ! resp_matches_direction(server, i$direction) )
+	if ( !force_log && !resp_matches_direction(server, i$direction) )
 		return LOG::null_file;
-		
+
 	if ( i$split )
 		{
 		if ( is_local_addr(server) )
@@ -45,7 +45,7 @@ function choose(a: string, server: addr): file
 		return i$log;
 		}
 	}
-	
+
 function buffer(a: string, setit: bool)
 	{
 	local i = logs[a];
@@ -62,12 +62,11 @@ function buffer(a: string, setit: bool)
 	}
 
 # TODO: remove the print and uncomment the file_opened event below
-#       when bro has the file_opened event.  this is broken until then
-#       because file rotation does not reprint the header.
+#       when bro has the file_opened event.
 function open_log_files(a: string)
 	{
 	local i = logs[a];
-	if ( i$direction == None ) return;
+	if ( i$direction == Neither ) return;
 	
 	if ( i$split )
 		{
@@ -109,7 +108,6 @@ event rotate_interval(f: file) &priority=-1
 	local fn = get_file_name(f);
 	# TODO: make this not depend on the file extension being .log
 	local log_type = gsub(fn, /(-(in|out)bound)?\.log$/, "");
-	print log_type;
 	if ( log_type in logs )
 		{
 		local i = logs[log_type];
@@ -130,7 +128,7 @@ event bro_init()
 
 event bro_init() &priority=-10
 	{
-	local d = set(Inbound,Outbound,All,None);
+	local d = set(Inbound,Outbound,All,Neither);
 	for ( lt in logs )
 		{
 		# This doesn't work for some reason.

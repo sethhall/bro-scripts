@@ -97,7 +97,7 @@ function is_valid_ip(ip_str: string): bool
 	return F;
 	}
 
-# This output a string_array of ip addresses extracted from a string.
+# This outputs a string_array of ip addresses extracted from a string.
 # given: "this is 1.1.1.1 a test 2.2.2.2 string with ip addresses 3.3.3.3"
 # outputs: { [1] = 1.1.1.1, [2] = 2.2.2.2, [3] = 3.3.3.3 }
 function find_ip_addresses(input: string): string_array
@@ -112,8 +112,43 @@ function find_ip_addresses(input: string): string_array
 		}
 	return output;
 	}
-
 	
+	
+type track_count: record {
+	n: count &default=0;
+	index: count &default=0;
+};
+
+const default_notice_thresholds: vector of count = {
+	20, 100, 1000, 10000, 100000, 1000000, 10000000,
+} &redef;
+
+# This is total rip off from scan.bro, but placed in the global namespace
+# and slightly reworked to be easier to work with and more general.
+function thresh_check(v: vector of count, tracker: track_count): bool
+	{
+	if ( tracker$index <= |v| && tracker$n >= v[tracker$index] )
+		{
+		++tracker$index;
+		return T;
+		}
+	else
+		{
+		return F;
+		}
+	}
+
+function default_thresh_check(tracker: track_count): bool
+	{
+	return thresh_check(default_notice_thresholds, tracker);
+	}
+	
+# This can be used for &default values on tables when the index is an addr.
+function addr_empty_string_set(a: addr): set[string]
+	{
+	return set();
+	}
+
 # Some enums for deciding what and when to log.
 type Direction: enum { Inbound, Outbound, All, Neither };
 type Hosts: enum { LocalHosts, RemoteHosts, AllHosts, NoHosts };
