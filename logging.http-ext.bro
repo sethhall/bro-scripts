@@ -27,8 +27,7 @@ event bro_init()
 	                                       "resp_h", "resp_p",
 	                                       "force_log_reasons",
 	                                       "method", "url", "referrer",
-	                                       "user_agent", "proxied_for",
-	                                       "force_log_reasons"));
+	                                       "user_agent", "proxied_for"));
 	
 	# Set this log to always accept output because the POST logging
 	# must be specifically enabled per-request anyway.

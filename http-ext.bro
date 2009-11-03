@@ -170,7 +170,7 @@ event http_message_done(c: connection, is_orig: bool, stat: http_message_stat) &
 		
 		++activity_counters[id$orig_h]$sql_injections$n;
 		
-		if ( default_thresh_check(activity_counters[id$orig_h]$sql_injections) )
+		if ( default_check_threshold(activity_counters[id$orig_h]$sql_injections) )
 			{
 			NOTICE([$note=HTTP_SQL_Injection_Attack,
 			        $msg=fmt("SQL injection attack (n=%d): %s -> %s",
@@ -185,7 +185,7 @@ event http_message_done(c: connection, is_orig: bool, stat: http_message_stat) &
 		sess_ext$force_log=T;
 		add sess_ext$force_log_reasons["sql_injection_probe"];
 		
-		if ( default_thresh_check(activity_counters[c$id$orig_h]$sql_injection_probes) )
+		if ( default_check_threshold(activity_counters[c$id$orig_h]$sql_injection_probes) )
 			{
 			NOTICE([$note=HTTP_SQL_Injection_Heavy_Probing, 
 			        $msg=fmt("Heavy probing from %s", id$orig_h), 

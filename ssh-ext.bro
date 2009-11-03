@@ -22,8 +22,19 @@ export {
 	const authentication_data_size = 5500 &redef;
 	const guessing_timeout = 30 mins;
 	
+	redef enum Notice += {
+		SSH_Login,
+		SSH_PasswordGuessing,
+		SSH_LoginByPasswordGuesser,
+		SSH_Login_From_Strange_Hostname,
+		SSH_Bytecount_Inconsistency,
+	};
+	
 	# Keeps count of how many rejections a host has had
-	global password_rejections: table[addr] of count &default=0 &write_expire=guessing_timeout;
+	global password_rejections: table[addr] of track_count 
+		&default=default_track_count
+		&write_expire=guessing_timeout;
+	
 	# Keeps track of hosts identified as guessing passwords
 	global password_guessers: set[addr] &read_expire=guessing_timeout+1hr;
 	
@@ -49,14 +60,6 @@ export {
 
 	# This is a table with orig subnet as the key, and subnet as the value.
 	const ignore_guessers: table[subnet] of subnet &redef;
-	
-	redef enum Notice += {
-		SSH_Login,
-		SSH_PasswordGuessing,
-		SSH_LoginByPasswordGuesser,
-		SSH_Login_From_Strange_Hostname,
-		SSH_Bytecount_Inconsistency,
-	};
 } 
 
 # Examples for how to handle notices from this script.
@@ -88,7 +91,7 @@ event check_ssh_connection(c: connection, done: bool)
 	# If this is no longer a known SSH connection, just return.
 	if ( c$id !in active_ssh_conns )
 		return;
-	
+
 	# If this is still a live connection and the byte count has not
 	# crossed the threshold, just return and let the resheduled check happen later.
 	if ( !done && c$resp$size < authentication_data_size )
@@ -99,7 +102,7 @@ event check_ssh_connection(c: connection, done: bool)
 	# doesn't send back at least 50 bytes.
 	if (c$resp$size < 50)
 		return;
-	
+
 	local ssh_conn = active_ssh_conns[c$id];
 	local status = "failure";
 	local direction = is_local_addr(c$id$orig_h) ? "to" : "from";
@@ -113,20 +116,22 @@ event check_ssh_connection(c: connection, done: bool)
 		if ( log_geodata_on_failure )
 			location = (direction == "to") ? lookup_location(c$id$resp_h) : lookup_location(c$id$orig_h);
 
+		if ( c$id$orig_h !in password_rejections )
+			password_rejections[c$id$orig_h] = default_track_count(c$id$orig_h);
+			
 		# Track the number of rejections
 		if ( !(c$id$orig_h in ignore_guessers &&
 		       c$id$resp_h in ignore_guessers[c$id$orig_h]) )
-			password_rejections[c$id$orig_h] += 1;
+			++password_rejections[c$id$orig_h]$n;
 
-		if ( password_rejections[c$id$orig_h] > password_guesses_limit && 
-		     c$id$orig_h !in password_guessers )
+		if ( default_check_threshold(password_rejections[c$id$orig_h]) )
 			{
 			add password_guessers[c$id$orig_h];
 			NOTICE([$note=SSH_PasswordGuessing,
 			        $conn=c,
 			        $msg=fmt("SSH password guessing by %s", c$id$orig_h),
-			        $sub=fmt("%d failed logins", password_rejections[c$id$orig_h]),
-			        $n=password_rejections[c$id$orig_h]]);
+			        $sub=fmt("%d failed logins", password_rejections[c$id$orig_h]$n),
+			        $n=password_rejections[c$id$orig_h]$n]);
 			}
 		} 
 	# TODO: This is to work around a quasi-bug in Bro which occasionally 
@@ -137,15 +142,15 @@ event check_ssh_connection(c: connection, done: bool)
 		status = "success";
 		location = (direction == "to") ? lookup_location(c$id$resp_h) : lookup_location(c$id$orig_h);
 
-		if ( password_rejections[c$id$orig_h] > password_guesses_limit &&
+		if ( password_rejections[c$id$orig_h]$n > password_guesses_limit &&
 		     c$id$orig_h !in password_guessers)
 			{
 			add password_guessers[c$id$orig_h];
 			NOTICE([$note=SSH_LoginByPasswordGuesser,
 			        $conn=c,
-			        $n=password_rejections[c$id$orig_h],
+			        $n=password_rejections[c$id$orig_h]$n,
 			        $msg=fmt("Successful SSH login by password guesser %s", c$id$orig_h),
-			        $sub=fmt("%d failed logins", password_rejections[c$id$orig_h])]);
+			        $sub=fmt("%d failed logins", password_rejections[c$id$orig_h]$n)]);
 			}
 
 		local message = fmt("SSH login %s %s \"%s\" \"%s\" %f %f %s (triggered with %d bytes)",

@@ -119,28 +119,31 @@ type track_count: record {
 	index: count &default=0;
 };
 
+function default_track_count(a: addr): track_count
+	{
+	local x: track_count;
+	return x;
+	}
+
 const default_notice_thresholds: vector of count = {
-	20, 100, 1000, 10000, 100000, 1000000, 10000000,
+	30, 100, 1000, 10000, 100000, 1000000, 10000000,
 } &redef;
 
 # This is total rip off from scan.bro, but placed in the global namespace
 # and slightly reworked to be easier to work with and more general.
-function thresh_check(v: vector of count, tracker: track_count): bool
+function check_threshold(v: vector of count, tracker: track_count): bool
 	{
 	if ( tracker$index <= |v| && tracker$n >= v[tracker$index] )
 		{
 		++tracker$index;
 		return T;
 		}
-	else
-		{
-		return F;
-		}
+	return F;
 	}
 
-function default_thresh_check(tracker: track_count): bool
+function default_check_threshold(tracker: track_count): bool
 	{
-	return thresh_check(default_notice_thresholds, tracker);
+	return check_threshold(default_notice_thresholds, tracker);
 	}
 	
 # This can be used for &default values on tables when the index is an addr.
