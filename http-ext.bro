@@ -195,35 +195,35 @@ event http_message_done(c: connection, is_orig: bool, stat: http_message_stat) &
 		}
 	
 @ifdef ( MalwareComBr_BlockList )
-	if ( MalwareComBr_BlockList in url )
+	if ( MalwareComBr_BlockList in sess_ext$url )
 		{
 		sess_ext$force_log=T;
 		sess_ext$force_log_client_body=T;
 		add sess_ext$force_log_reasons["malware_com_br"];
-		local malware_com_br_msg = fmt("%s %s %s", r$method, url, referrer);
+		local malware_com_br_msg = fmt("%s %s %s", sess_ext$method, sess_ext$url, sess_ext$referrer);
 		NOTICE([$note=HTTP_Malware_com_br_Block_List, $msg=malware_com_br_msg, $conn=c]);
 		}
 @endif
 
 @ifdef ( ZeusDomains )
-	if ( host in ZeusDomains )
+	if ( sess_ext$host in ZeusDomains )
 		{
 		sess_ext$force_log=T;
 		sess_ext$force_log_client_body=T;
 		add sess_ext$force_log_reasons["zeustracker"];
-		local zeus_msg = fmt("%s communicated with likely Zeus controller at %s", c$id$orig_h, host);
-		NOTICE([$note=HTTP_Zeus_Communication, $msg=zeus_msg, $sub=url, $conn=c]);
+		local zeus_msg = fmt("%s communicated with likely Zeus controller at %s", c$id$orig_h, sess_ext$host);
+		NOTICE([$note=HTTP_Zeus_Communication, $msg=zeus_msg, $sub=sess_ext$url, $conn=c]);
 		}
 @endif
 
 @ifdef ( MalwareDomainList )
-	if ( url in MalwareDomainList )
+	if ( sess_ext$url in MalwareDomainList )
 		{
 		sess_ext$force_log=T;
 		sess_ext$force_log_client_body=T;
 		add sess_ext$force_log_reasons["malwaredomainlist"];
-		local mdl_msg = fmt("%s communicated with malwaredomainlist.com URL at %s", c$id$orig_h, url);
-		NOTICE([$note=HTTP_MalwareDomainList_Communication, $msg=mdl_msg, $sub=MalwareDomainList[url], $conn=c]);
+		local mdl_msg = fmt("%s communicated with malwaredomainlist.com URL at %s", c$id$orig_h, sess_ext$url);
+		NOTICE([$note=HTTP_MalwareDomainList_Communication, $msg=mdl_msg, $sub=MalwareDomainList[sess_ext$url], $conn=c]);
 		}
 @endif
 
