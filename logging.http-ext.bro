@@ -43,10 +43,16 @@ event bro_init()
 
 event http_ext(id: conn_id, si: http_ext_session_info)
 	{
-	if ( id$resp_h in always_log || id$orig_h in always_log )
+	if ( id$resp_h in always_log )
 		{
 		si$force_log = T;
 		add si$force_log_reasons[fmt("server_in_logged_subnet_%s", always_log[id$resp_h])];
+		}
+		
+	if ( id$orig_h in always_log )
+		{
+		si$force_log = T;
+		add si$force_log_reasons[fmt("client_in_logged_subnet_%s", always_log[id$orig_h])];
 		}
 
 	local log = LOG::get_file("http-ext", id$resp_h, si$force_log);
