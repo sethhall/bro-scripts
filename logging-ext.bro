@@ -66,7 +66,6 @@ function buffer(a: string, setit: bool)
 function open_log_files(a: string)
 	{
 	local i = logs[a];
-	if ( i$direction == Neither ) return;
 	
 	if ( i$split )
 		{
