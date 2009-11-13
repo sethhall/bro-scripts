@@ -27,7 +27,7 @@ event bro_init()
 	                                      "path", "is_webmail", "agent"));
 	}
 
-event smtp_ext(id: conn_id, si: smtp_ext_session_info)
+event smtp_ext(id: conn_id, si: smtp_ext_session_info) &priority=-10
 	{
 	if ( si$mailfrom != "" )
 		{

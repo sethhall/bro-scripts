@@ -23,7 +23,7 @@ event bro_init()
 	                                      "reply_code", "reply", "reply_message"));
 	}
 
-event ftp_ext(id: conn_id, si: ftp_ext_session_info)
+event ftp_ext(id: conn_id, si: ftp_ext_session_info) &priority=-10
 	{
 	local log = LOG::get_file("ftp-ext", id$resp_h, F);
 	

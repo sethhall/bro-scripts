@@ -41,7 +41,7 @@ event bro_init()
 	                                             "client_body"));
 	}
 
-event http_ext(id: conn_id, si: http_ext_session_info)
+event http_ext(id: conn_id, si: http_ext_session_info) &priority=-10
 	{
 	if ( id$resp_h in always_log )
 		{

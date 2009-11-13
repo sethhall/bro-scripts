@@ -25,7 +25,7 @@ event bro_init()
 	
 	}
 
-event ssh_ext(id: conn_id, si: ssh_ext_session_info)
+event ssh_ext(id: conn_id, si: ssh_ext_session_info) &priority=-10
 	{
 	local log = LOG::get_file("ssh-ext", id$resp_h, F);
 
