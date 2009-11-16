@@ -19,6 +19,7 @@ event bro_init()
 	                                      "ts",
 	                                      "orig_h", "orig_p",
 	                                      "resp_h", "resp_p",
+	                                      "username", "password",
 	                                      "command", "url",
 	                                      "reply_code", "reply", "reply_message"));
 	}
@@ -35,6 +36,8 @@ event ftp_ext(id: conn_id, si: ftp_ext_session_info) &priority=-10
 	                   si$request_t,
 	                   id$orig_h, fmt("%d", id$orig_p),
 	                   id$resp_h, fmt("%d", id$resp_p),
+	                   si$username, 
+	                   ( si$username in guest_ids ) ? si$password : "",
 	                   si$command, si$url,
 	                   si$reply_code, reply, si$reply_msg);
 
