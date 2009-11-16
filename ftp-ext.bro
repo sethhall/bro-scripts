@@ -33,23 +33,22 @@ event ftp_request(c: connection, command: string, arg: string) &priority=10
 	{
 	if ( c$id !in ftp_ext_sessions ) 
 		ftp_ext_sessions[c$id] = new_ftp_ext_session();
-		
+	
 	local sess_ext = ftp_ext_sessions[c$id];
 	
 	# Throw the ftp_ext event if the session record is "ready".
 	# This will make sure we get the last reply from the previous command.
 	if ( sess_ext$ready )
 		{
-		event ftp_ext(c$id, sess_ext);
+		# Copy the sess_ext variable because modifications to it can encounter
+		# race conditions with the event dispatching system.
+		event ftp_ext(c$id, copy(sess_ext));
 		sess_ext$ready=F;
-		sess_ext$command="";
 		}
 	
-	if ( command == "USER" )
-		sess_ext$username=arg;
-	
-	if ( command == "PASS" )
-		sess_ext$password=arg;
+	# Update the session's command everytime (after potentially dispatching
+	# the ftp_ext event).
+	sess_ext$command = command;
 	
 	if ( command == "RETR" || command == "STOR" )
 		{
@@ -62,8 +61,13 @@ event ftp_request(c: connection, command: string, arg: string) &priority=10
 		local pathfile = sub(absolute_path(sess, arg), /<unknown>/, "/.");
 		
 		sess_ext$url = fmt("ftp://%s%s", c$id$resp_h, pathfile);
-		sess_ext$command = command;
 		}
+		
+	else if ( command == "USER" )
+		sess_ext$username=arg;
+
+	else if ( command == "PASS" )
+		sess_ext$password=arg;
 	}
 
 event ftp_reply(c: connection, code: count, msg: string, cont_resp: bool)
@@ -90,8 +94,7 @@ event connection_state_remove(c: connection)
 	{
 	if ( c$id in ftp_ext_sessions )
 		{
-		local sess_ext = ftp_ext_sessions[c$id];
-		event ftp_ext(c$id, sess_ext);
+		event ftp_ext(c$id, ftp_ext_sessions[c$id]);
 		delete ftp_ext_sessions[c$id];
 		}
 	}
