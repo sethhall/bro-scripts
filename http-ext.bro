@@ -18,6 +18,7 @@ type http_ext_session_info: record {
 	
 	# This is internal state tracking.
 	full: bool &default=F;
+	new_user_agent: bool &default=F;
 };
 
 function default_http_ext_session_info(): http_ext_session_info
@@ -168,7 +169,7 @@ event http_message_done(c: connection, is_orig: bool, stat: http_message_stat) &
 		sess_ext$force_log=T;
 		add sess_ext$force_log_reasons["sql_injection"];
 		
-		++activity_counters[id$orig_h]$sql_injections$n;
+		++(activity_counters[id$orig_h]$sql_injections$n);
 		
 		if ( default_check_threshold(activity_counters[id$orig_h]$sql_injections) )
 			{
@@ -184,6 +185,7 @@ event http_message_done(c: connection, is_orig: bool, stat: http_message_stat) &
 		{
 		sess_ext$force_log=T;
 		add sess_ext$force_log_reasons["sql_injection_probe"];
+		++(activity_counters[id$orig_h]$sql_injection_probes$n);
 		
 		if ( default_check_threshold(activity_counters[c$id$orig_h]$sql_injection_probes) )
 			{
@@ -228,7 +230,7 @@ event http_message_done(c: connection, is_orig: bool, stat: http_message_stat) &
 @endif
 
 	event http_ext(id, sess_ext);
-		
+	
 	# No data from the reply is supported yet, so it's ok to delete here.
 	delete conn_info[c$id];
 	}
@@ -255,11 +257,14 @@ event http_header(c: connection, is_orig: bool, name: string, value: string)
 		if ( ignored_user_agents in value ) 
 			return;
 			
-		if ( resp_matches_hosts(c$id$orig_h, track_user_agents_for) ||
+		if ( addr_matches_hosts(c$id$orig_h, track_user_agents_for) ||
 			 value in known_user_agents[c$id$orig_h] )
 			{
 			if ( c$id$orig_h !in known_user_agents )
+				{
 				known_user_agents[c$id$orig_h] = set();
+				ci$new_user_agent = T;
+				}
 			add known_user_agents[c$id$orig_h][value];
 			}
 		}
@@ -284,6 +289,6 @@ event http_header(c: connection, is_orig: bool, name: string, value: string)
 		if ( ci$proxied_for == "" )
 			ci$proxied_for = fmt("(%s::%s)", name, value);
 		else
-			ci$proxied_for = fmt("%s and (%s: %s)", ci$proxied_for, name, value);
+			ci$proxied_for = fmt("%s, (%s::%s)", ci$proxied_for, name, value);
 		}
 	}

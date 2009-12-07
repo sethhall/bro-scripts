@@ -153,39 +153,27 @@ function addr_empty_string_set(a: addr): set[string]
 	}
 
 # Some enums for deciding what and when to log.
-type Direction: enum { Inbound, Outbound, All, Neither };
-type Hosts: enum { LocalHosts, RemoteHosts, AllHosts, NoHosts };
+type Directions_and_Hosts: enum {
+	Inbound, Outbound, All, Neither,
+	LocalHosts, RemoteHosts, AllHosts, NoHosts
+};
+const DIRECTIONS = set(Inbound, Outbound, All, Neither);
+const HOSTS = set(LocalHosts, RemoteHosts, AllHosts, NoHosts);
 
-function orig_matches_direction(ip: addr, d: Direction): bool
+function id_matches_directions(id: conn_id, d: Directions_and_Hosts): bool
 	{
 	if ( d == Neither ) return F;
 
 	return ( d == All ||
-	         (d == Outbound && is_local_addr(ip)) ||
-	         (d == Inbound && !is_local_addr(ip)) );
+	        (d == Outbound && is_local_addr(id$orig_h)) ||
+	        (d == Inbound && is_local_addr(id$resp_h)) );
 	}
 	
-function resp_matches_direction(ip: addr, d: Direction): bool
+function addr_matches_hosts(ip: addr, h: Directions_and_Hosts): bool
 	{
-	if ( d == Neither ) return F;
+	if ( h == NoHosts ) return F;
 	
-	return ( d == All ||
-	         (d == Inbound && is_local_addr(ip)) ||
-	         (d == Outbound && !is_local_addr(ip)) );
-	}
-
-function conn_matches_direction(id: conn_id, d: Direction): bool
-	{
-	if ( d == NoHosts ) return F;
-	
-	return orig_matches_direction(id$orig_h, d);
-	}
-	
-function resp_matches_hosts(ip: addr, d: Hosts): bool
-	{
-	if ( d == NoHosts ) return F;
-	
-	return ( d == AllHosts ||
-	         (d == LocalHosts && is_local_addr(ip)) ||
-	         (d == RemoteHosts && !is_local_addr(ip)) );
+	return ( h == AllHosts ||
+	        (h == LocalHosts && is_local_addr(ip)) ||
+	        (h == RemoteHosts && !is_local_addr(ip)) );
 	}

@@ -51,11 +51,11 @@ export {
 		SMTP_Suspicious_Origination,
 	};
 	
-	# Direction to capture the full "Received from" path. (from the Hosts enum)
+	# Direction to capture the full "Received from" path.
 	#    RemoteHosts - only capture the path until an internal host is found.
 	#    LocalHosts - only capture the path until the external host is discovered.
 	#    AllHosts - capture the entire path.
-	const mail_path_capture: Hosts = LocalHosts &redef;
+	const mail_path_capture = LocalHosts &redef;
 	
 	# Places where it's suspicious for mail to originate from.
 	#  this requires all-capital letter, two character country codes (e.x. US)
@@ -365,7 +365,7 @@ event smtp_data(c: connection, is_orig: bool, data: string)
 		conn_log$received_from_originating_ip = text_ip;
 
 		local ellipsis = "";
-		if ( !resp_matches_hosts(ip, mail_path_capture) && 
+		if ( !addr_matches_hosts(ip, mail_path_capture) && 
 		     ip !in private_address_space )
 			{
 			ellipsis = "... ";

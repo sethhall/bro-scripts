@@ -8,7 +8,7 @@ export {
 	global known_services: set[addr, port] &create_expire=1day &synchronized &persistent;
 	
 	# The hosts whose services should be logged.
-	const logged_hosts: Hosts = LocalHosts &redef;
+	const logged_hosts = LocalHosts &redef;
 }
 
 # The temporary holding place for new, unknown services.
@@ -18,7 +18,7 @@ event connection_established(c: connection)
 	{
 	local id = c$id;
 	if ( [id$resp_h, id$resp_p] !in established_conns && 
-	     resp_matches_hosts(id$resp_h, logged_hosts) )
+	     addr_matches_hosts(id$resp_h, logged_hosts) )
 		add established_conns[id$resp_h, id$resp_p];
 	}
 	

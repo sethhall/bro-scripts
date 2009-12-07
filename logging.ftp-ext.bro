@@ -26,7 +26,7 @@ event bro_init()
 
 event ftp_ext(id: conn_id, si: ftp_ext_session_info) &priority=-10
 	{
-	local log = LOG::get_file("ftp-ext", id$resp_h, F);
+	local log = LOG::get_file_by_id("ftp-ext", id, F);
 	
 	local reply = "";
 	if ( si$reply_code in ftp_replies )
