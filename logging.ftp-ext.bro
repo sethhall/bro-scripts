@@ -34,8 +34,8 @@ event ftp_ext(id: conn_id, si: ftp_ext_session_info) &priority=-10
 
 	print log, cat_sep("\t", "\\N",
 	                   si$request_t,
-	                   id$orig_h, fmt("%d", id$orig_p),
-	                   id$resp_h, fmt("%d", id$resp_p),
+	                   id$orig_h, port_to_count(id$orig_p),
+	                   id$resp_h, port_to_count(id$resp_p),
 	                   si$username, 
 	                   ( si$username in guest_ids ) ? si$password : "",
 	                   si$command, si$url,

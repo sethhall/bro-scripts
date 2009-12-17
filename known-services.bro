@@ -30,7 +30,9 @@ event known_services_done(c: connection)
 	     "ftp-data" !in c$service ) # don't include ftp data sessions
 		{
 		add known_services[id$resp_h, id$resp_p];
-		print services_log, cat_sep("\t", "\\N", id$resp_h, fmt("%d", id$resp_p), fmt_str_set(c$service, /-/));
+		print services_log, cat_sep("\t", "\\N", 
+		                            id$resp_h, port_to_count(id$resp_p), 
+		                            fmt_str_set(c$service, /-/));
 		}
 	}
 	
