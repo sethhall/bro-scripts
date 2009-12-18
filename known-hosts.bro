@@ -19,7 +19,8 @@ export {
 event bro_init()
 	{
 	LOG::create_logs("known-hosts", logging, split_log_file, T);
-	LOG::define_header("known-hosts", cat_sep("\t", "", "host"));
+	# Removed the header since it's fairly useless in this log.
+	#LOG::define_header("known-hosts", cat_sep("\t", "", "host"));
 	}
 
 event connection_established(c: connection)

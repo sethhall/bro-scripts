@@ -134,7 +134,7 @@ event file_opened(f: file) &priority=10
 	if ( log_type in logs )
 		{
 		local i = logs[log_type];
-		if ( i$header != "" )
+		if ( !is_remote_event() && i$header != "" )
 			print f, i$header;
 		}
 	else
