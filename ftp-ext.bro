@@ -4,7 +4,7 @@
 type ftp_ext_session_info: record {
 	username: string &default="";
 	password: string &default="";
-	request_t: time &optional;
+	request_t: time;
 	url: string &default="";
 	command: string &default="";
 	reply_code: count &default=0;
@@ -26,6 +26,7 @@ export {
 function new_ftp_ext_session(): ftp_ext_session_info
 	{
 	local x: ftp_ext_session_info;
+	x$request_t=network_time();
 	return x;
 	}
 
