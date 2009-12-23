@@ -1,10 +1,6 @@
 Bro-IDS analysis scripts
 ========================
-Many or all of these scripts will currently require Robin Sommer's branch
-of Bro.  
-
-  http://blog.icir.org/2007/12/robins-development-branch.html
-
+All of these scripts require Bro 1.5 or greater.
 
 ssh-ext.bro
 -----------
