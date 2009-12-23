@@ -103,6 +103,25 @@ export {
 		/(url=http:.*){4}/ | 
 		# more that 4 html links is also suspicious
 		/(a.href(=|%3[dD]).*){4}/ &redef;
+		
+		const http_forwarded_headers = {
+		  "HTTP_FORWARDED",
+		  "FORWARDED",
+		  "HTTP_X_FORWARDED_FOR",
+		  "X_FORWARDED_FOR",
+		  "HTTP_X_FORWARDED_FROM",
+		  "X_FORWARDED_FROM",
+		  "HTTP_CLIENT_IP",
+		  "CLIENT_IP",
+		  "HTTP_FROM",
+		  "FROM",
+		  "HTTP_VIA",
+		  "VIA",
+		  "HTTP_XROXY_CONNECTION",
+		  "XROXY_CONNECTION",
+		  "HTTP_PROXY_CONNECTION",
+		  "PROXY_CONNECTION",
+		} &redef;
 
 	global conn_info: table[conn_id] of http_ext_session_info 
 		&read_expire=5mins
@@ -269,22 +288,7 @@ event http_header(c: connection, is_orig: bool, name: string, value: string)
 			}
 		}
 
-	else if ( name == "HTTP_FORWARDED" ||
-	          name == "FORWARDED" ||
-	          name == "HTTP_X_FORWARDED_FOR" ||
-	          name == "X_FORWARDED_FOR" ||
-	          name == "HTTP_X_FORWARDED_FROM" ||
-	          name == "X_FORWARDED_FROM" ||
-	          name == "HTTP_CLIENT_IP" ||
-	          name == "CLIENT_IP" ||
-	          name == "HTTP_FROM" ||
-	          name == "FROM" ||
-	          name == "HTTP_VIA" ||
-	          name == "VIA" ||
-	          name == "HTTP_XROXY_CONNECTION" ||
-	          name == "XROXY_CONNECTION" ||
-	          name == "HTTP_PROXY_CONNECTION" ||
-	          name == "PROXY_CONNECTION")
+	else if ( name in http_forwarded_headers )
 		{
 		if ( ci$proxied_for == "" )
 			ci$proxied_for = fmt("(%s::%s)", name, value);
