@@ -104,24 +104,24 @@ export {
 		# more that 4 html links is also suspicious
 		/(a.href(=|%3[dD]).*){4}/ &redef;
 		
-		const http_forwarded_headers = {
-			"HTTP_FORWARDED",
-			"FORWARDED",
-			"HTTP_X_FORWARDED_FOR",
-			"X_FORWARDED_FOR",
-			"HTTP_X_FORWARDED_FROM",
-			"X_FORWARDED_FROM",
-			"HTTP_CLIENT_IP",
-			"CLIENT_IP",
-			"HTTP_FROM",
-			"FROM",
-			"HTTP_VIA",
-			"VIA",
-			"HTTP_XROXY_CONNECTION",
-			"XROXY_CONNECTION",
-			"HTTP_PROXY_CONNECTION",
-			"PROXY_CONNECTION",
-		} &redef;
+	const http_forwarded_headers = {
+		"HTTP_FORWARDED",
+		"FORWARDED",
+		"HTTP_X_FORWARDED_FOR",
+		"X_FORWARDED_FOR",
+		"HTTP_X_FORWARDED_FROM",
+		"X_FORWARDED_FROM",
+		"HTTP_CLIENT_IP",
+		"CLIENT_IP",
+		"HTTP_FROM",
+		"FROM",
+		"HTTP_VIA",
+		"VIA",
+		"HTTP_XROXY_CONNECTION",
+		"XROXY_CONNECTION",
+		"HTTP_PROXY_CONNECTION",
+		"PROXY_CONNECTION",
+	} &redef;
 
 	global conn_info: table[conn_id] of http_ext_session_info 
 		&read_expire=5mins
@@ -276,15 +276,13 @@ event http_header(c: connection, is_orig: bool, name: string, value: string)
 		if ( ignored_user_agents in value ) 
 			return;
 			
-		if ( addr_matches_hosts(c$id$orig_h, track_user_agents_for) ||
-			 value in known_user_agents[c$id$orig_h] )
+		if ( addr_matches_hosts(c$id$orig_h, track_user_agents_for) &&
+			 value !in known_user_agents[c$id$orig_h] )
 			{
 			if ( c$id$orig_h !in known_user_agents )
-				{
 				known_user_agents[c$id$orig_h] = set();
-				ci$new_user_agent = T;
-				}
 			add known_user_agents[c$id$orig_h][value];
+			ci$new_user_agent = T;
 			}
 		}
 
