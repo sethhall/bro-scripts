@@ -99,19 +99,10 @@ function open_log_files(a: string)
 			i$split1_log = open_log_file(cat(a,"-localhosts"));
 			i$split2_log = open_log_file(cat(a,"-remotehosts"));
 			}
-		if ( i$raw_output )
-			{
-			enable_raw_output(i$split1_log);
-			enable_raw_output(i$split2_log);
-			}
 		}
 	else
 		{
 		i$combined_log = open_log_file(a);
-		if ( i$raw_output )
-			{
-			enable_raw_output(i$combined_log);
-			}
 		}
 	}
 
@@ -134,6 +125,8 @@ event file_opened(f: file) &priority=10
 	if ( log_type in logs )
 		{
 		local i = logs[log_type];
+		if ( i$raw_output )
+			enable_raw_output(f);
 		if ( !is_remote_event() && i$header != "" )
 			print f, i$header;
 		}
