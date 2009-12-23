@@ -10,7 +10,7 @@ export {
 	
 	# Which SSH logins to record.
 	# Choices are: LocalHosts, RemoteHosts, AllHosts, NoHosts
-	const logging = AllHosts &redef;
+	const logging = LocalHosts &redef;
 	
 	# The list of all detected certs.  This prevents over-logging.
 	global certs: set[addr, port, string] &create_expire=1day &synchronized;
