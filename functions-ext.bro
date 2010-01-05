@@ -113,6 +113,58 @@ function find_ip_addresses(input: string): string_array
 	return output;
 	}
 	
+########################################
+# The following functions are for getting contact information (email) for an
+# IP address in your organization.  It will return data from nested subnets
+# as well.
+# Below is an example for using it:
+#
+#	redef subnet_to_admin_table += {
+#		[146.128.0.0/16] = "security@yourorg.com",
+#		[146.128.94.0/24] = "someone@yourorg.com",
+#	};
+#	
+#	event bro_init()
+#		{
+#		print fmt_email_string(find_all_emails(146.128.94.3));
+#			=> "security@yourorg.com, someone@yourorg.com"
+#		print fmt_email_string(find_all_emails(146.128.3.3));
+#			=> "security@yourorg.com"
+#		}
+########################################
+# TODO: make this work with IPv6
+function find_all_emails(ip: addr): set[string]
+	{
+	if ( ip !in subnet_to_admin_table ) return set();
+
+	local output_values: set[string] = set();
+	local tmp_ip: addr;
+	local i: count;
+	local emails: string;
+	for ( i in one_to_32 )
+		{
+		tmp_ip = mask_addr(ip, one_to_32[i]);
+		emails = subnet_to_admin_table[tmp_ip];
+		if ( emails != "" )
+			add output_values[emails];
+		}
+	return output_values;
+	}
+	
+function fmt_email_string(emails: set[string]): string
+	{
+	local output="";
+	for( email in emails )
+		{
+		if ( output == "" )
+			output = email;
+		else
+			output = fmt("%s, %s", output, email);
+		}
+	return output;
+	}
+	
+########################################
 	
 type track_count: record {
 	n: count &default=0;
