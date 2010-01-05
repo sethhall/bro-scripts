@@ -14,7 +14,11 @@ export {
 
 	# As commented above, set this to T if you are using hashed SSNs in your 
 	# SSN_list variable.
-	const use_md5_hashed_ssns = F;
+	const use_md5_hashed_ssns = F &redef;
+	
+	# If you think that there could be SSNs passed around without separators
+	# (just 9 digit integers), then set this to T.  
+	const check_with_no_separator = F &redef;
 
 	const ssn_log = open_log_file("ssn-exposure") &raw_output &redef;
 
@@ -27,10 +31,10 @@ export {
 	# This allows you to only alarm on more significant disclosures 
 	#  (instead of people sending their own SSN).
 	# NOT CURRENTLY WORKING!
-	const mass_exposure_num = 5;
+	const mass_exposure_num = 5 &redef;
 
-	# Uncomment the following line if you'd like to use the signature based 
-	# technique in this script.
+	# Put the following line in your local config before @load-ing this script
+	# if you'd like to use the signature based technique.
 	#const use_ssn_sigs = T;
 }
 
@@ -65,9 +69,9 @@ function check_ssns(c: connection, data: string): bool
 	for ( ssnp in ssnps )
 		{
 		# Make sure the number has either 2 hyphens, 2 spaces, or no separators.
-		if ( /[0-9]{3}-[0-9]{2}-[0-9]{4}/ in ssnp ||
-		     /[0-9]{3} [0-9]{2} [0-9]{4}/ in ssnp ||
-		     /[0-9]{9}/ in ssnp )
+		if ( /[\x000-9]{3}\x00?-[\x000-9]{2}\x00?-[\x000-9]{4}/ in ssnp ||
+		     /[\x000-9]{3}\x00?[[:blank:]][\x000-9]{2}\x00?[[:blank:]][\x000-9]{4}/ in ssnp ||
+		     (check_with_no_separator && /[\x000-9]{9}/ in ssnp) )
 			{
 			# Remove all non-numerics
 			local clean_ssnp = gsub(ssnp, /[^0-9]/, "");
