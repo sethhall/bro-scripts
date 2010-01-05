@@ -72,12 +72,14 @@ export {
 	  | /sorbs\.net\// 
 	  | /bsn\.borderware\.com\//
 	  | /mail-abuse\.com\//
-	  | /bbl\.barracudacentral\.com\//
+	  | /b\.barracudacentral\.com\//
 	  | /psbl\.surriel\.com\// 
 	  | /antispam\.imp\.ch\// 
 	  | /dyndns\.com\/.*spam/
 	  | /rbl\.knology\.net\//
-	  | /intercept\.datapacket\.net\// &redef;
+	  | /intercept\.datapacket\.net\//
+	  | /uceprotect\.net\//
+	  | /hostkarma\.junkemailfilter\.com\// &redef;
 	
 	global conn_info: table[conn_id] of smtp_ext_session_info 
 		&read_expire=5mins
