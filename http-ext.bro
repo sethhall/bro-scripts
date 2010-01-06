@@ -293,4 +293,18 @@ event http_header(c: connection, is_orig: bool, name: string, value: string)
 		else
 			ci$proxied_for = fmt("%s, (%s::%s)", ci$proxied_for, name, value);
 		}
+		
+	else if ( name == "X-FLASH-VERSION" )
+		{
+		local vt = split_all(value, /,/);
+		if ( |vt| > 3 )
+			{
+			local v: software_version = [$major=to_int(vt[1]),
+			                             $minor=to_int(vt[2]),
+			                             $minor2=to_int(vt[3]),
+			                             $addl=vt[4]];
+			local s: software = [$name="AdobeFlashPlayer", $version=v];
+			event software_version_found(c, c$id$orig_h, s, "");
+			}
+		}
 	}

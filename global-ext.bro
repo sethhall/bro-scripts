@@ -1,6 +1,4 @@
 @load site
-@load functions-ext
-@load logging-ext
 
 const private_address_space: set[subnet] = {10.0.0.0/8, 192.168.0.0/16, 127.0.0.0/8, 172.16.0.0/12};
 
@@ -15,3 +13,6 @@ const subnet_to_admin_table: table[subnet] of string = {
 # to push data from Bro directly into a database.
 #  see: http://github.com/sethhall/bro-dblogger
 global db_log: event(db_table: string, data: any);
+
+@load functions-ext
+@load logging-ext
