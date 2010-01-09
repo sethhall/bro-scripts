@@ -104,23 +104,24 @@ export {
 		# more that 4 html links is also suspicious
 		/(a.href(=|%3[dD]).*){4}/ &redef;
 		
-	const http_forwarded_headers = {
-		"HTTP_FORWARDED",
+	# The list of HTTP headers typically used to indicate a proxied request.
+	const http_forwarded_headers: set[string] = {
+		"HTTP-FORWARDED",
 		"FORWARDED",
-		"HTTP_X_FORWARDED_FOR",
-		"X_FORWARDED_FOR",
-		"HTTP_X_FORWARDED_FROM",
-		"X_FORWARDED_FROM",
-		"HTTP_CLIENT_IP",
-		"CLIENT_IP",
-		"HTTP_FROM",
+		"HTTP-X-FORWARDED-FOR",
+		"X-FORWARDED-FOR",
+		"HTTP-X-FORWARDED-FROM",
+		"X-FORWARDED-FROM",
+		"HTTP-CLIENT-IP",
+		"CLIENT-IP",
+		"HTTP-FROM",
 		"FROM",
-		"HTTP_VIA",
+		"HTTP-VIA",
 		"VIA",
-		"HTTP_XROXY_CONNECTION",
-		"XROXY_CONNECTION",
-		"HTTP_PROXY_CONNECTION",
-		"PROXY_CONNECTION",
+		"HTTP-XROXY-CONNECTION",
+		"XROXY-CONNECTION",
+		"HTTP-PROXY-CONNECTION",
+		"PROXY-CONNECTION",
 	} &redef;
 
 	global conn_info: table[conn_id] of http_ext_session_info 
