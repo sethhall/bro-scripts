@@ -4,11 +4,11 @@
 module SSL_KnownCerts;
 
 export {
-	# If set to T, this will split inbound and outbound transactions
+	# If set to T, this will split local and remote certs
 	# into separate files.  F merges everything into a single file.
 	const split_log_file = F &redef;
 	
-	# Which SSH logins to record.
+	# Certificates presented by which hosts to record.
 	# Choices are: LocalHosts, RemoteHosts, AllHosts, NoHosts
 	const logging = LocalHosts &redef;
 	

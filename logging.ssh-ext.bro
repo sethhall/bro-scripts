@@ -7,6 +7,7 @@ export {
 	# If set to T, this will split inbound and outbound transactions
 	# into separate files.  F merges everything into a single file.
 	const split_log_file = F &redef;
+	
 	# Which SSH logins to record.
 	# Choices are: Inbound, Outbound, All
 	const logging = All &redef;

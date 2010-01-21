@@ -1,25 +1,10 @@
 @load global-ext
 @load dns
 
-module DNS;
-
-export {
-	const local_domains = /(^|\.)(osu|ohio-state)\.edu$/ | 
-	                      /(^|\.)akamai(tech)?\.net$/ &redef;
-	
-	const dns_ext_log = open_log_file("dns-ext") &raw_output;
-	
-	redef enum Notice += { 
-		# Raised when a non-local name is found to be pointing at a local host.
-		#  This only works appropriately when all of your authoritative DNS 
-		#  servers are located in your "local_nets".
-		DNSExternalName, 
-		};
-}
-
-type dns_session_info_ext: record {
+type dns_ext_session_info: record {
 	id: conn_id;
-	start: time;
+	ts: time;
+	trans_id: count; 
 	query: string;
 	qtype: count;
 	qclass: count;
@@ -35,8 +20,31 @@ type dns_session_info_ext: record {
 	replies: set[string];
 };
 
-global dns_sessions_ext: table[addr, addr, count] of dns_session_info_ext;
+# Define the generic ftp-ext event that can be handled from other scripts
+global dns_ext: event(id: conn_id, di: dns_ext_session_info);
 
+module DNS;
+
+export {
+	# Follow this example to define domains that you would consider "local".
+	# This is primarily useful if you are monitoring authoritative nameservers,
+	# but also useful for any zones that *should* be pointing at your 
+	# network.
+	# e.g.
+	#const local_domains = /(^|\.)(osu|ohio-state)\.edu$/ | 
+	#                      /(^|\.)akamai(tech)?\.net$/ &redef;
+	const local_domains = /(^|\.)akamai(tech)?\.net$/ &redef;
+	
+	redef enum Notice += { 
+		# Raised when a non-local name is found to be pointing at a local host.
+		#  This only works appropriately when all of your authoritative DNS 
+		#  servers are located in your "local_nets".
+		DNSExternalName, 
+		};
+}
+
+
+global dns_sessions_ext: table[addr, addr, count] of dns_ext_session_info;
 
 # This doesn't work with live traffic yet.
 # It's waiting for support to dynamically construct pattern variables at runtime.
@@ -64,34 +72,7 @@ event expire_DNS_session_ext(orig: addr, resp: addr, trans_id: count)
 		local session = dns_sessions[orig, resp, trans_id];
 		local session_ext = dns_sessions_ext[orig, resp, trans_id];
 		
-		local flags: set[string];
-		if ( session_ext$RD )
-			add flags["RD"];
-		if ( session_ext$RA )
-			add flags["RA"];
-		if ( session_ext$TC )
-			add flags["TC"];
-		if ( session_ext$QR )
-			add flags["QR"];
-		if ( session_ext$Z )
-			add flags["Z"];
-		if ( session_ext$AA )
-			add flags["AA"];
-		
-		print dns_ext_log, cat_sep("\t", "\\N",
-		                           session_ext$start,
-		                           session$last_active,
-		                           orig, fmt("%s",session_ext$id$orig_p),
-		                           resp, fmt("%s",session_ext$id$resp_p),
-		                           query_types[session_ext$qtype],
-		                           dns_class[session_ext$qclass],
-		                           session_ext$query, fmt("%04x",trans_id),
-		                           fmt("%.0f", interval_to_double(session_ext$TTL)),
-		                           fmt_str_set(flags, /!!!!/),
-		                           base_error[session_ext$rcode],
-		                           fmt_str_set(session_ext$replies, /!!!!/)
-		                           );
-		
+		event dns_ext(session_ext$id, session_ext);
 		}
 	}
 
@@ -101,11 +82,12 @@ event dns_request(c: connection, msg: dns_msg, query: string, qtype: count, qcla
 	local orig = id$orig_h;
 	local resp = id$resp_h;
 	local session = lookup_DNS_session(c, msg$id);
-	local session_ext: dns_session_info_ext;
+	local session_ext: dns_ext_session_info;
 	if ( [orig, resp, msg$id] !in dns_sessions_ext )
 		{
 		session_ext$id = c$id;
-		session_ext$start = network_time();
+		session_ext$trans_id = msg$id;
+		session_ext$ts = network_time();
 		session_ext$RD = msg$RD;
 		session_ext$TC = msg$TC;
 		session_ext$qtype = qtype;
@@ -128,7 +110,7 @@ event dns_A_reply(c: connection, msg: dns_msg, ans: dns_answer, a: addr)
 	local orig = id$orig_h;
 	local resp = id$resp_h;
 	local session = lookup_DNS_session(c, msg$id);
-	local session_ext: dns_session_info_ext;
+	local session_ext: dns_ext_session_info;
 	
 	if ( [orig, resp, msg$id] in dns_sessions_ext )
 		{
@@ -138,7 +120,6 @@ event dns_A_reply(c: connection, msg: dns_msg, ans: dns_answer, a: addr)
 		session_ext$TTL = ans$TTL;
 		session_ext$rcode = msg$rcode;
 		}
-	
 	
 	# Check for out of place domain names
 	if ( is_local_addr(a) &&            # referring to a local host
@@ -157,7 +138,7 @@ event dns_TXT_reply(c: connection, msg: dns_msg, ans: dns_answer, str: string)
 	local orig = id$orig_h;
 	local resp = id$resp_h;
 	local session = lookup_DNS_session(c, msg$id);
-	local session_ext: dns_session_info_ext;
+	local session_ext: dns_ext_session_info;
 	
 	if ( [orig, resp, msg$id] in dns_sessions_ext )
 		{
@@ -174,7 +155,7 @@ event dns_AAAA_reply(c: connection, msg: dns_msg, ans: dns_answer, a: addr,
 	local orig = id$orig_h;
 	local resp = id$resp_h;
 	local session = lookup_DNS_session(c, msg$id);
-	local session_ext: dns_session_info_ext;
+	local session_ext: dns_ext_session_info;
 	
 	if ( [orig, resp, msg$id] in dns_sessions_ext )
 		{
@@ -188,15 +169,13 @@ event dns_AAAA_reply(c: connection, msg: dns_msg, ans: dns_answer, a: addr,
 event dns_MX_reply(c: connection, msg: dns_msg, ans: dns_answer, name: string,
                    preference: count)
 	{
-	local id = c$id;
-	local orig = id$orig_h;
-	local resp = id$resp_h;
+	local id=c$id;
 	local session = lookup_DNS_session(c, msg$id);
-	local session_ext: dns_session_info_ext;
+	local session_ext: dns_ext_session_info;
 	
-	if ( [orig, resp, msg$id] in dns_sessions_ext )
+	if ( [id$orig_h, id$resp_h, msg$id] in dns_sessions_ext )
 		{
-		session_ext = dns_sessions_ext[orig, resp, msg$id];
+		session_ext = dns_sessions_ext[id$orig_h, id$resp_h, msg$id];
 		session_ext$rcode = msg$rcode;
 		add session_ext$replies[name];
 		}
@@ -208,7 +187,7 @@ event dns_PTR_reply(c: connection, msg: dns_msg, ans: dns_answer, name: string)
 	local orig = id$orig_h;
 	local resp = id$resp_h;
 	local session = lookup_DNS_session(c, msg$id);
-	local session_ext: dns_session_info_ext;
+	local session_ext: dns_ext_session_info;
 	
 	if ( [orig, resp, msg$id] in dns_sessions_ext )
 		{
@@ -217,11 +196,6 @@ event dns_PTR_reply(c: connection, msg: dns_msg, ans: dns_answer, name: string)
 		add session_ext$replies[name];
 		}
 	}
-	
-#event dns_query_reply(c: connection, msg: dns_msg, query: string, qtype: count, qclass: count)
-#	{
-#	print query;
-#	}
 
 event dns_end(c: connection, msg: dns_msg)
 	{
@@ -229,17 +203,11 @@ event dns_end(c: connection, msg: dns_msg)
 	local orig = id$orig_h;
 	local resp = id$resp_h;
 	local session = lookup_DNS_session(c, msg$id);
-	local session_ext: dns_session_info_ext;
+	local session_ext: dns_ext_session_info;
 	
 	if ( [orig, resp, msg$id] in dns_sessions_ext )
 		{
 		session_ext = dns_sessions_ext[orig, resp, msg$id];
 		session_ext$rcode = msg$rcode;
 		}	
-	}
-	
-	
-event bro_done()
-	{
-	print dns_sessions_ext;
 	}
