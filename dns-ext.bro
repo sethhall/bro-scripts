@@ -4,7 +4,7 @@
 type dns_ext_session_info: record {
 	id: conn_id;
 	ts: time;
-	trans_id: count; 
+	trans_id: count;
 	query: string;
 	qtype: count;
 	qclass: count;
@@ -20,7 +20,7 @@ type dns_ext_session_info: record {
 	replies: set[string];
 };
 
-# Define the generic ftp-ext event that can be handled from other scripts
+# Define the generic dns-ext event that can be handled from other scripts
 global dns_ext: event(id: conn_id, di: dns_ext_session_info);
 
 module DNS;
