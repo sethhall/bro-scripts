@@ -192,7 +192,13 @@ function define_header(a: string, h: string)
 	
 function define_tag(a: string, tag: string)
 	{
+	if ( a !in logs )
+		{
+		print fmt("WARNING: log type '%s' must be defined before adding tag '%s'.", a, tag);
+		return;
+		}
 	# TODO: Validate this is being called during bro_init
+	
 	local i = logs[a];
 	logs[cat(a,"-",tag)] = copy(i);
 	add i$tags[tag];

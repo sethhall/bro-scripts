@@ -117,11 +117,11 @@ event software_register(c: connection, host: addr, s: software, descr: string)
 	if ( s$name in identify_by_major && s$version$major >= 0 )
 		s$name = fmt("%s-%d", s$name, s$version$major);
 
-	local host_software = host_software[host];
+	local hs = host_software[host];
 	# Software already registered for this host?
-	if ( s$name in host_software )
+	if ( s$name in hs )
 		{
-		local old = host_software[s$name];
+		local old = hs[s$name];
 		
 		# Is it a potentially interesting version change 
 		# and is it a different version?
@@ -141,7 +141,7 @@ event software_register(c: connection, host: addr, s: software, descr: string)
 		event software_new(c, host, s, descr);
 		}
 
-	host_software[s$name] = s;
+	hs[s$name] = s;
 	}
 
 event software_version_found(c: connection, host: addr, s: software,
