@@ -21,7 +21,7 @@ event bro_init()
 	{
 	LOG::create_logs("dns-ext", query_logging, split_log_file, T);
 	
-	if (minimal_logging)
+	if ( minimal_logging )
 		LOG::define_header("dns-ext", cat_sep("\t", "\\N",
 		                                      "ts", "orig_h", 
 		                                      "query_type", "query"));
@@ -40,7 +40,7 @@ event dns_ext(id: conn_id, di: dns_ext_session_info) &priority=-10
 	{
 	local log = LOG::get_file_by_id("dns-ext", id, F);
 	
-	if (minimal_logging)
+	if ( minimal_logging )
 		{
 		print log, cat_sep("\t", "\\N",
 		                   di$ts,

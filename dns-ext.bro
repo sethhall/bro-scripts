@@ -47,7 +47,7 @@ export {
 global dns_sessions_ext: table[addr, addr, count] of dns_ext_session_info;
 
 # This doesn't work with live traffic yet.
-# It's waiting for support to dynamically construct pattern variables at runtime.
+# It's waiting for support to dynamically construct pattern variables at init time.
 #global dns_suffix_regex = build_regex(local_domains, "(^|\.)~~$");
 #event bro_init()
 #	{

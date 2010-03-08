@@ -1,30 +1,25 @@
-@load http
 @load global-ext
+@load http-ext
+
+@load signatures
+redef signature_files += "http-identified-files.sig";
 
 module HTTP;
 
 export {
-	const http_magic_log = open_log_file("http-identified-files") &raw_output &redef;
-
-	# Base the libmagic analysis on at least this many bytes.
-	const magic_content_limit = 1024 &redef;
+	redef enum Notice += {
+		# This notice is thrown when the file extension doesn't 
+		# seem to match the file contents.
+		HTTP_IncorrectFileType, 
+	};
 	
-	const watched_mime_types: set[string] = { 
-		"application/x-dosexec",      # Windows and DOS executables
-		"application/x-executable",   # *NIX executable binary
-	} &redef; 
-	
-	const watched_descriptions =
-		/PHP script text/ &redef;
+	# MIME types that you'd like this script to identify and log.
+	const watched_mime_types = /application\/x-dosexec/
+	                         | /application\/x-executable/ &redef;
 	
 	# URLs included here are not logged and notices are not thrown.
 	# Take care when defining regexes to not be overly broad.
 	const ignored_urls = /^http:\/\/www\.download\.windowsupdate\.com\// &redef;
-	
-	redef enum Notice += {
-		# This notice is thrown when the file extension doesn't match the file contents
-		HTTP_IncorrectFileType, 
-	};
 	
 	# Create regexes that *should* in be in the urls for specifics mime types.
 	# Notices are thrown if the pattern doesn't match the url for the file type.
@@ -33,69 +28,54 @@ export {
 	} &redef;
 }
 
-event http_entity_data(c: connection, is_orig: bool, length: count, data: string)
-	{
-	if ( is_orig ) # We are only watching for server responses
-		return;
-	
-	local s = lookup_http_request_stream(c);
-	local msg = get_http_message(s, is_orig);
-	
-@ifndef	( content_truncation_limit )
-	# This is only done if http-body.bro is not loaded.
-	msg$data_length = msg$data_length + length;
-@endif
-	
-	# For the time being, we'll just use the data from the first packet.
-	# Don't continue until we have enough data
-	#if ( msg$data_length < magic_content_limit )
-	#	return;
-	
-	# Right now, only try this for the first chunk of data
-	if ( msg$data_length > length )
-		return;
-	
-	local abstract = sub_bytes(data, 1, magic_content_limit);
-	local magic_mime = identify_data(abstract, T);
-	local magic_descr = identify_data(abstract, F);
+# Don't delete the http sessions at the end of the request!
+redef watch_reply=T;
 
-	if ( (magic_mime in watched_mime_types ||
-	      watched_descriptions in magic_descr) &&
-	     s$first_pending_request in s$requests )
-		{
-		local r = s$requests[s$first_pending_request];
-		local host = (s$next_request$host=="") ? fmt("%s", c$id$resp_h) : s$next_request$host;
-		local url = fmt("http://%s%s", host, r$URI);
-		
-		event file_transferred(c, abstract, magic_descr, magic_mime);
-		
-		if ( ignored_urls in url )
-			return;
-		
-		local file_type = "";
-		if ( magic_mime in watched_mime_types )
-			file_type = magic_mime;
-		else
-			file_type = magic_descr;
-		
-		print http_magic_log, cat_sep("\t", "\\N", network_time(), s$id, 
-		                                           c$id$orig_h, fmt("%d", c$id$orig_p), 
-		                                           c$id$resp_h, fmt("%d", c$id$resp_p), 
-		                                           file_type, r$method, url);
-		
-		if ( (magic_mime in mime_types_extensions && 
-		      mime_types_extensions[magic_mime] !in url) ||
-		     (magic_descr in mime_types_extensions && 
-		      mime_types_extensions[magic_descr] !in url) )
-			{
-			local message = fmt("%s %s %s", file_type, r$method, url);
-			NOTICE([$note=HTTP_IncorrectFileType, 
-			        $msg=message, 
-			        $conn=c, 
-			        $method=r$method, 
-			        $URL=url]);
-			}
-		}
+redef notice_policy += {
+	# Ignore all matchfile signature hits.
+	[$pred(n: notice_info) = 
+		{ return (n$note == SensitiveSignature && /^matchfile/ in n$filename); },
+	 $result = NOTICE_IGNORE],
+};
+
+# This script uses the file tagging method to create a separate file.
+event bro_init()
+	{
+	# Add the tag for log file splitting.
+	LOG::define_tag("http-ext", "identified-files");
 	}
 
+event signature_match(state: signature_state, msg: string, data: string)
+	{
+	# Only signatures matching file types are dealt with here.
+	if ( /^matchfile/ !in state$id ) return;
+	
+	# Not much point in any of this if we don't know about the 
+	# HTTP-ness of the connection.
+	if ( state$conn$id !in conn_info ) return;
+	
+	local si = conn_info[state$conn$id];
+	# Set the mime type seen.
+	si$mime_type = msg;
+	
+	if ( watched_mime_types in msg )
+		{
+		# Add a tag for logging purposes.
+		add si$tags["identified-files"];
+		}
+		
+	if ( ignored_urls !in si$url &&
+	     msg in mime_types_extensions && 
+	     mime_types_extensions[msg] !in si$url )
+		{
+		local message = fmt("%s %s %s", msg, si$method, si$url);
+		NOTICE([$note=HTTP_IncorrectFileType, 
+		        $msg=message, 
+		        $conn=state$conn, 
+		        $method=si$method, 
+		        $URL=si$url]);
+		}
+	
+	event file_transferred(state$conn, data, "", msg);
+	}
 

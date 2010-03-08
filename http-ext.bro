@@ -11,10 +11,17 @@ type http_ext_session_info: record {
 	referrer: string &default="";
 	user_agent: string &default="";
 	proxied_for: string &default="";
+	mime_type: string &default="";
+	md5: string &default="";
+	status_code: count &default=0;
+	status_msg: string &default="";
 
 	force_log: bool &default=F; # This will force the request to be logged (if doing any logging)
 	force_log_client_body: bool &default=F; # This will force the client body to be logged.
 	force_log_reasons: set[string]; # Reasons why the forced logging happened.
+	
+	# This is for the logging framework to split logs and/or tag lines.
+	tags: set[string];
 	
 	# This is internal state tracking.
 	full: bool &default=F;
@@ -24,9 +31,9 @@ type http_ext_session_info: record {
 function default_http_ext_session_info(): http_ext_session_info
 	{
 	local x: http_ext_session_info;
-	local tmp: set[string] = set();
 	x$start_time=network_time();
-	x$force_log_reasons=tmp;
+	x$force_log_reasons=set();
+	x$tags=set();
 	return x;
 	}
 
@@ -143,6 +150,10 @@ export {
 		&redef;
 }
 
+# This is used internally by other scripts to indicate when the http_ext 
+# event should be raised.
+const watch_reply = F &redef;
+
 # This is called from signatures (theoretically)
 function log_post(state: signature_state, data: string): bool
 	{
@@ -169,6 +180,17 @@ event http_request(c: connection, method: string, original_URI: string,
 	local sess_ext = conn_info[c$id];
 	sess_ext$method = method;
 	sess_ext$uri = unescaped_URI;
+	}
+	
+event http_reply(c: connection, version: string, code: count, reason: string)
+	{
+	local id = c$id;
+	if ( id !in conn_info )
+		return;
+	
+	local sess_ext = conn_info[id];
+	sess_ext$status_code = code;
+	sess_ext$status_msg = reason;
 	}
 
 event http_message_done(c: connection, is_orig: bool, stat: http_message_stat) &priority=5
@@ -248,11 +270,25 @@ event http_message_done(c: connection, is_orig: bool, stat: http_message_stat) &
 		NOTICE([$note=HTTP_MalwareDomainList_Communication, $msg=mdl_msg, $sub=MalwareDomainList[sess_ext$url], $conn=c]);
 		}
 @endif
-
-	event http_ext(id, sess_ext);
 	
-	# No data from the reply is supported yet, so it's ok to delete here.
-	delete conn_info[c$id];
+	if ( !watch_reply )
+		{
+		event http_ext(id, sess_ext);
+		delete conn_info[c$id];
+		}
+	}
+	
+event http_message_done(c: connection, is_orig: bool, stat: http_message_stat) &priority=-10
+	{
+	if ( c$id in conn_info )
+		{
+		if ( (is_orig && !watch_reply) ||
+			 (!is_orig && watch_reply) )
+			{
+			event http_ext(c$id, conn_info[c$id]);
+			delete conn_info[c$id];
+			}
+		}
 	}
 
 event http_header(c: connection, is_orig: bool, name: string, value: string)

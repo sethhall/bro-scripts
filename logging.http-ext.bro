@@ -27,7 +27,9 @@ event bro_init()
 	                                       "resp_h", "resp_p",
 	                                       "force_log_reasons",
 	                                       "method", "url", "referrer",
-	                                       "user_agent", "proxied_for"));
+	                                       "user_agent", "proxied_for",
+	                                       "mime_type", "md5",
+	                                       "status_code", "status_msg"));
 	
 	# Set this log to always accept output (All) because the POST logging
 	# must be specifically enabled per-request anyway.
@@ -46,7 +48,7 @@ event bro_init()
 	
 	}
 
-event http_ext(id: conn_id, si: http_ext_session_info) &priority=-10
+event http_ext(id: conn_id, si: http_ext_session_info) &priority=-9
 	{
 	if ( id$resp_h in always_log )
 		{
@@ -60,14 +62,16 @@ event http_ext(id: conn_id, si: http_ext_session_info) &priority=-10
 		add si$force_log_reasons[fmt("client_in_logged_subnet_%s", always_log[id$orig_h])];
 		}
 
-	local log = LOG::get_file_by_id("http-ext", id, si$force_log);
-	print log, cat_sep("\t", "\\N",
-	                   si$start_time,
-	                   id$orig_h, port_to_count(id$orig_p),
-	                   id$resp_h, port_to_count(id$resp_p),
-	                   fmt_str_set(si$force_log_reasons, /DONTMATCH/),
-	                   si$method, si$url, si$referrer,
-	                   si$user_agent, si$proxied_for);
+	local log_line = cat_sep("\t", "\\N",
+	                         si$start_time,
+	                         id$orig_h, port_to_count(id$orig_p),
+	                         id$resp_h, port_to_count(id$resp_p),
+	                         fmt_str_set(si$force_log_reasons, /DONTMATCH/),
+	                         si$method, si$url, si$referrer,
+	                         si$user_agent, si$proxied_for,
+	                         si$mime_type, si$md5,
+	                         si$status_code, si$status_msg);
+	LOG::print_log_by_id("http-ext", id, si$force_log, si$tags, log_line);
 	}
 
 # Do the user-agent logging.
@@ -83,10 +87,7 @@ event http_ext(id: conn_id, si: http_ext_session_info)
 # This is for logging POST contents during suspicious POSTs.
 event http_entity_data(c: connection, is_orig: bool, length: count, data: string)
 	{
-	if ( !is_orig ) return;
-
-	if ( c$id !in HTTP::conn_info )
-		return;
+	if ( !is_orig || c$id !in HTTP::conn_info ) return;
 	
 	local si = HTTP::conn_info[c$id];
 	
@@ -113,7 +114,7 @@ event http_entity_data(c: connection, is_orig: bool, length: count, data: string
 		                   data);
 		
 		# Stop logging the client body.  The log file fills up like crazy 
-		# in some cases if we don't stop this.  If another chuck of data
+		# in some cases if we don't stop this.  If another chunk of data
 		# is detected as loggable later, it will be reenabled anyway.
 		si$force_log_client_body=F;
 		}
