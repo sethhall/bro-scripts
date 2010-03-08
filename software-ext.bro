@@ -37,7 +37,7 @@ export {
 	# Index is the name of the software.
 	type software_set: table[string] of software;
 	# The set of software associated with an address.
-	global host_software: table[addr] of software_set &create_expire=1day;
+	global host_software: table[addr] of software_set &create_expire=1day &synchronized;
 }
 
 event bro_init()
