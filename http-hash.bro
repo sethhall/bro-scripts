@@ -1,4 +1,4 @@
-@load http-identified-files
+@load http-ext-identified-files
 
 module HTTP;
 

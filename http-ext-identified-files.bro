@@ -2,7 +2,7 @@
 @load http-ext
 
 @load signatures
-redef signature_files += "http-identified-files.sig";
+redef signature_files += "http-ext-identified-files.sig";
 
 module HTTP;
 

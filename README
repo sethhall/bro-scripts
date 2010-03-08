@@ -1,10 +1,3 @@
 Bro-IDS analysis scripts
 ========================
 All of these scripts require Bro 1.5 or greater.
-
-ssh-ext.bro
------------
-Determination of a successful SSH connection is made by the byte count
-returned by the server.  The default is 5500 bytes.  Redef the 
-authentication_data_size variable to change it (for example to 4k)...
-    redef SSH::authentication_data_size = 4000;
