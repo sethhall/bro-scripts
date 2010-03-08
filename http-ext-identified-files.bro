@@ -31,12 +31,15 @@ export {
 # Don't delete the http sessions at the end of the request!
 redef watch_reply=T;
 
-redef notice_policy += {
-	# Ignore all matchfile signature hits.
-	[$pred(n: notice_info) = 
-		{ return (n$note == SensitiveSignature && /^matchfile/ in n$filename); },
-	 $result = NOTICE_IGNORE],
-};
+# Make the default signature action ignore anything beginning with "matchfile"
+function default_signature_action(sig: string): SigAction
+	{
+	if ( /^matchfile-/ in sig )
+		return SIG_IGNORE;
+	else
+		return SIG_ALARM;
+	}
+redef signature_actions &default=default_signature_action;
 
 # This script uses the file tagging method to create a separate file.
 event bro_init()

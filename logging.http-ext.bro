@@ -18,7 +18,7 @@ export {
 	const always_log: table[subnet] of string &redef;
 }
 
-event bro_init()
+event bro_init() &priority=10
 	{
 	LOG::create_logs("http-ext", logging, split_log_file, T);
 	LOG::define_header("http-ext", cat_sep("\t", "\\N",
