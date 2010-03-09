@@ -206,6 +206,9 @@ function define_tag(a: string, tag: string)
 	
 event file_opened(f: file) &priority=10
 	{
+	# Only do any of this for files opened locally.
+	if ( is_remote_event() ) return;
+	
 	local filename = get_file_name(f);
 	# TODO: make this not depend on the file extension being .log
 	local log_type = gsub(filename, /(-(((in|out)bound)|(local|remote)hosts))?\.log$/, "");
@@ -214,7 +217,7 @@ event file_opened(f: file) &priority=10
 		local i = logs[log_type];
 		if ( i$raw_output )
 			enable_raw_output(f);
-		if ( !is_remote_event() && i$header != "" )
+		if ( i$header != "" )
 			print f, i$header;
 		}
 	else
