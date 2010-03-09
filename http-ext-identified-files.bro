@@ -19,7 +19,7 @@ export {
 	
 	# URLs included here are not logged and notices are not thrown.
 	# Take care when defining regexes to not be overly broad.
-	const ignored_urls = /^http:\/\/www\.download\.windowsupdate\.com\// &redef;
+	const ignored_urls = /^http:\/\/(au\.|www\.)?download\.windowsupdate\.com\/msdownload\/update/ &redef;
 	
 	# Create regexes that *should* in be in the urls for specifics mime types.
 	# Notices are thrown if the pattern doesn't match the url for the file type.
