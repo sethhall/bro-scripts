@@ -1,5 +1,6 @@
 @load global-ext
 @load http-ext
+@load http-reply
 
 @load signatures
 redef signature_files += "http-ext-identified-files.sig";
@@ -61,24 +62,26 @@ event signature_match(state: signature_state, msg: string, data: string)
 	# Set the mime type seen.
 	si$mime_type = msg;
 	
-	if ( watched_mime_types in msg )
+	if ( ignored_urls !in si$url )
 		{
-		# Add a tag for logging purposes.
-		add si$tags["identified-files"];
-		}
+		if ( watched_mime_types in msg )
+			{
+			# Add a tag for logging purposes.
+			add si$tags["identified-files"];
+			}
 		
-	if ( ignored_urls !in si$url &&
-	     msg in mime_types_extensions && 
-	     mime_types_extensions[msg] !in si$url )
-		{
-		local message = fmt("%s %s %s", msg, si$method, si$url);
-		NOTICE([$note=HTTP_IncorrectFileType, 
-		        $msg=message, 
-		        $conn=state$conn, 
-		        $method=si$method, 
-		        $URL=si$url]);
+		if ( msg in mime_types_extensions && 
+		     mime_types_extensions[msg] !in si$url )
+			{
+			local message = fmt("%s %s %s", msg, si$method, si$url);
+			NOTICE([$note=HTTP_IncorrectFileType, 
+			        $msg=message, 
+			        $conn=state$conn, 
+			        $method=si$method, 
+			        $URL=si$url]);
+			}
+		
+		event file_transferred(state$conn, data, "", msg);
 		}
-	
-	event file_transferred(state$conn, data, "", msg);
 	}
 

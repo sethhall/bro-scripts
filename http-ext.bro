@@ -270,12 +270,6 @@ event http_message_done(c: connection, is_orig: bool, stat: http_message_stat) &
 		NOTICE([$note=HTTP_MalwareDomainList_Communication, $msg=mdl_msg, $sub=MalwareDomainList[sess_ext$url], $conn=c]);
 		}
 @endif
-	
-	if ( !watch_reply )
-		{
-		event http_ext(id, sess_ext);
-		delete conn_info[c$id];
-		}
 	}
 	
 event http_message_done(c: connection, is_orig: bool, stat: http_message_stat) &priority=-10
@@ -291,9 +285,17 @@ event http_message_done(c: connection, is_orig: bool, stat: http_message_stat) &
 		}
 	}
 
-event http_header(c: connection, is_orig: bool, name: string, value: string)
+event http_header(c: connection, is_orig: bool, name: string, value: string) &priority=10
 	{
-	if ( !is_orig ) return;
+	if ( !is_orig )
+		{
+		if ( name == "SERVER" )
+			{
+			local ver = default_software_parsing(value);
+			event software_version_found(c, c$id$resp_h, ver, "Web Server");
+			}
+		return;
+		}
 
 	if ( c$id !in conn_info )
 		conn_info[c$id] = default_http_ext_session_info();
@@ -341,7 +343,7 @@ event http_header(c: connection, is_orig: bool, name: string, value: string)
 			                             $minor2=to_int(vt[5]),
 			                             $addl=vt[7]];
 			local s: software = [$name="AdobeFlashPlayer", $version=v];
-			event software_version_found(c, c$id$orig_h, s, "");
+			event software_version_found(c, c$id$orig_h, s, "Browser Plugin");
 			}
 		}
 	}
