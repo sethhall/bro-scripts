@@ -12,13 +12,13 @@ type smtp_ext_session_info: record {
 	to: set[string];
 	reply_to: string &default="";
 	subject: string &default="";
-	x_originating_ip: string &default="";
-	received_from_originating_ip: string &default="";
+	x_originating_ip: addr &default=0.0.0.0;
+	received_from_originating_ip: addr &default=0.0.0.0;
 	first_received: string &default="";
 	second_received: string &default="";
 	last_reply: string &default=""; # last message the server sent to the client
 	files: set[string];
-	path: string &default="";
+	path: vector of addr;
 	is_webmail: bool &default=F; # This is not being set yet.
 	agent: string &default="";
 	
@@ -33,7 +33,8 @@ function default_smtp_ext_session_info(): smtp_ext_session_info
 	local tmp: set[string] = set();
 	local tmp2: set[string] = set();
 	local tmp3: set[string] = set();
-	return [$rcptto=tmp, $to=tmp2, $files=tmp3];
+	local tmp4: vector of addr = vector(0.0.0.0);
+	return [$rcptto=tmp, $to=tmp2, $files=tmp3, $path=tmp4];
 	}
 
 # Define the generic smtp-ext event that can be handled from other scripts
@@ -114,9 +115,9 @@ function end_smtp_extended_logging(c: connection)
 	
 	local loc: geo_location;
 	local ip: addr;
-	if ( conn_log$x_originating_ip != "" )
+	if ( conn_log$x_originating_ip != 0.0.0.0 )
 		{
-		ip = to_addr(conn_log$x_originating_ip);
+		ip = conn_log$x_originating_ip;
 		loc = lookup_location(ip);
 	
 		if ( loc$country_code in suspicious_origination_countries ||
@@ -129,10 +130,10 @@ function end_smtp_extended_logging(c: connection)
 			}
 		}
 		
-	if ( conn_log$received_from_originating_ip != "" &&
+	if ( conn_log$received_from_originating_ip != 0.0.0.0 &&
 	     conn_log$received_from_originating_ip != conn_log$x_originating_ip )
 		{
-		ip = to_addr(conn_log$received_from_originating_ip);
+		ip = conn_log$received_from_originating_ip;
 		loc = lookup_location(ip);
 	
 		if ( loc$country_code in suspicious_origination_countries ||
@@ -143,6 +144,15 @@ function end_smtp_extended_logging(c: connection)
 				    $sub=fmt("Subject: %s", conn_log$subject),
 					$conn=c]);
 			}
+		}
+	
+	# reverse the "received from" path
+	sort(conn_log$path, function(a:addr, b:addr):int { return -1; });
+	# if the MUA provided a user-agent string, raise the software event.
+	if ( conn_log$agent != "" )
+		{
+		local s = default_software_parsing(conn_log$agent);
+		event software_version_found(c, conn_log$path[1], s, "MUA");
 		}
 
 	# Throw the event for other scripts to handle
@@ -198,6 +208,10 @@ event smtp_request(c: connection, is_orig: bool, command: string, arg: string) &
 		end_smtp_extended_logging(c);
 		conn_info[id] = default_smtp_ext_session_info();
 		conn_info[id]$helo = tmp_helo;
+
+		# Start off the received from headers with this connection
+		conn_info[id]$path[1] = c$id$resp_h;
+		conn_info[id]$path[2] = c$id$orig_h;
 		}
 		
 	if ( id !in conn_info )  
@@ -314,9 +328,9 @@ event smtp_data(c: connection, is_orig: bool, data: string) &priority=-5
 		{
 		local addresses = find_ip_addresses(data);
 		if ( |addresses| > 0 )
-			conn_log$x_originating_ip = addresses[1];
+			conn_log$x_originating_ip = to_addr(addresses[1]);
 		else
-			conn_log$x_originating_ip = data;
+			conn_log$x_originating_ip = to_addr(data);
 		conn_log$current_header = "x-originating-ip";
 		}
 	
@@ -326,7 +340,6 @@ event smtp_data(c: connection, is_orig: bool, data: string) &priority=-5
 		conn_log$agent = split1(data, /:[[:blank:]]*/)[2];
 		conn_log$current_header = "agent";
 		}
-	
 	}
 	
 # This event handler builds the "Received From" path by reading the 
@@ -364,20 +377,15 @@ event smtp_data(c: connection, is_orig: bool, data: string)
 		if ( ip == 127.0.0.1 ) return;
 
 		# This overwrites each time.
-		conn_log$received_from_originating_ip = text_ip;
+		conn_log$received_from_originating_ip = ip;
 
-		local ellipsis = "";
 		if ( !addr_matches_hosts(ip, mail_path_capture) && 
 		     ip !in private_address_space )
 			{
-			ellipsis = "... ";
 			conn_log$received_finished=T;
 			}
 
-		if (conn_log$path == "")
-			conn_log$path = fmt("%s%s -> %s -> %s", ellipsis, ip, id$orig_h, id$resp_h);
-		else
-			conn_log$path = fmt("%s%s -> %s", ellipsis, ip, conn_log$path);
+		conn_log$path[|conn_log$path|+1] = ip;
 		}
 	else if ( !smtp_sessions[id]$in_header && !conn_log$received_finished ) 
 		conn_log$received_finished=T;

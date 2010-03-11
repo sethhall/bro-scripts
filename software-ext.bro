@@ -33,7 +33,7 @@ export {
 	# Raise this event from other scripts when software is discovered.
 	# This event is actually defined internally in Bro.
 	#global software_version_found: event(c: connection, host: addr, s: software, descr: string);	
-
+	
 	# Index is the name of the software.
 	type software_set: table[string] of software;
 	# The set of software associated with an address.

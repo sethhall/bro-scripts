@@ -165,7 +165,38 @@ function fmt_email_string(emails: set[string]): string
 	}
 	
 ########################################
+
+# Get a software version instance full of zeros.
+function get_default_software_version(): software_version
+	{
+	local tmp_int: int = 0;
+	local tmp_v: software_version = [$major=tmp_int,
+	                                 $minor=tmp_int,
+	                                 $minor2=tmp_int,
+	                                 $addl=""];
+	return tmp_v;
+	}
 	
+function default_software_parsing(sw: string): software
+	{
+	local v = get_default_software_version();
+	local version_parts = split_all(sw, /[0-9\-\.]{2,}/);
+	if ( |version_parts| >= 3 )
+		{
+		local version_numbers = split_all(version_parts[2], /[\.\-]/);
+		if ( |version_numbers| >= 7 )
+			v$addl = version_numbers[7];
+		if ( |version_numbers| >= 5 )
+			v$minor2 = to_int(version_numbers[5]);
+		if ( |version_numbers| >= 3 )
+			v$minor = to_int(version_numbers[3]);
+		if ( |version_numbers| >= 1 )
+			v$major = to_int(version_numbers[1]);
+		}
+	local this_software: software = [$name=sw, $version=v];
+	return this_software;
+	}
+
 type track_count: record {
 	n: count &default=0;
 	index: count &default=0;
