@@ -73,7 +73,7 @@ signature matchfile-jpg {
 	event "image/jpeg"
 }
 
-signature match-tiff {
+signature matchfile-tiff {
 	http-reply-body /\x4D\x4D\x00[\x2A\x2B]/
 	event "image/tiff"
 }
