@@ -45,7 +45,8 @@ event bro_init()
 	LOG::create_logs("software-ext", logging, split_log_file, T);
 	LOG::define_header("software-ext", cat_sep("\t", "\\N", 
 	                                           "ts", "host", 
-	                                           "software", "version"));
+	                                           "software", "version",
+	                                           "description"));
 	}
 
 # Compare two versions.
