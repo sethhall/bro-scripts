@@ -146,13 +146,15 @@ function end_smtp_extended_logging(c: connection)
 			}
 		}
 	
+	# FIXME: I'm seeing crashes from this.  We'll delay and just use the 
+	#        last element of the vector for the software event for now.
 	# reverse the "received from" path
-	sort(conn_log$path, function(a:addr, b:addr):int { return -1; });
+	#sort(conn_log$path, function(a:addr, b:addr):int { return -1; });
 	# if the MUA provided a user-agent string, raise the software event.
 	if ( conn_log$agent != "" )
 		{
 		local s = default_software_parsing(conn_log$agent);
-		event software_version_found(c, conn_log$path[1], s, "MUA");
+		event software_version_found(c, conn_log$path[|conn_log$path|], s, "MUA");
 		}
 
 	# Throw the event for other scripts to handle
