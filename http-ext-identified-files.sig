@@ -36,6 +36,11 @@ signature matchfile-jar {
 	event "application/java-archive"
 }
 
+signature matchfile-class {
+	http-reply-body /\xCA\xFE\xBA\xBE/
+	event "application/java-byte-code"
+}
+
 signature matchfile-msoffice-2007 {
 	# MS Office 2007 XML documents
 	http-reply-body /\x50\x4B\x03\x04\x14\x00\x06\x00/
@@ -58,9 +63,19 @@ signature matchfile-pdf {
 	event "application/pdf"
 }
 
-signature matchfile-class {
-	http-reply-body /\xCA\xFE\xBA\xBE/
-	event "application/java-byte-code"
+signature matchfile-html {
+	http-reply-body /<[hH][tT][mM][lL]/
+	event "text/html"
+}
+
+signature matchfile-html2 {
+	http-reply-body /<![dD][oO][cC][tT][yY][pP][eE][[:blank:]][hH][tT][mM][lL]/
+	event "text/html"
+}
+
+signature matchfile-xml {
+	http-reply-body /<\??[xX][mM][lL]/
+	event "text/xml"
 }
 
 signature matchfile-gif {
@@ -69,7 +84,7 @@ signature matchfile-gif {
 }
 
 signature matchfile-jpg {
-	http-reply-body /\xFF\xD8\xFF[\xDB\xE0\xE1\xE2\xE3\xE8]..[\x4A\x45\x53][\x46\x78\x50][\x49\x69][\x46\x66][\x00\x46]/
+	http-reply-body /\xFF\xD8\xFF[\xDB\xE0\xE1\xE2\xE3\xE8]..[\x4A\x45\x53][\x46\x78\x50][\x49\x69][\x46\x66]/
 	event "image/jpeg"
 }
 
