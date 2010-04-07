@@ -5,7 +5,7 @@ module KnownServices;
 export {
 	const services_log = open_log_file("known-services") &raw_output &redef;
 
-	global known_services: set[addr, port] &create_expire=1day &synchronized &persistent;
+	global known_services: set[addr, port] &create_expire=1day &synchronized;
 	
 	# The hosts whose services should be logged.
 	const logged_hosts = LocalHosts &redef;
