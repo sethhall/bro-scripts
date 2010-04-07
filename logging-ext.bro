@@ -217,7 +217,10 @@ event file_opened(f: file) &priority=10
 		local i = logs[log_type];
 		if ( i$raw_output )
 			enable_raw_output(f);
-		if ( i$header != "" )
+		if ( i$header != "" && 
+		     (peer_description == "" ||
+		      peer_description == "manager" ||
+		      peer_description == "standalone") )
 			print f, i$header;
 		}
 	else
