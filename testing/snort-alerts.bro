@@ -2,12 +2,12 @@
 
 type snort_alert_data: record {
 	ts: time;                     # timestamp
-	sig_generator: count;         # which part of snort generated the alert? */
-	sig_id: count;                # sig id for this generator */
-	sig_rev: count;               # sig revision for this id */
-	event_classification: string; # event classification */
-	event_priority: count;        # event priority */
-	event_id: count;              # event ID */
+	sig_generator: count;         # which part of snort generated the alert?
+	sig_id: count;                # sig id for this generator
+	sig_rev: count;               # sig revision for this id
+	event_classification: string; # event classification
+	event_priority: count;        # event priority
+	event_id: count;              # event ID
 	event_reference: count;       # reference to other events that have gone off,
 };
 
