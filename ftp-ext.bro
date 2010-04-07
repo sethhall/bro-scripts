@@ -93,7 +93,7 @@ event ftp_reply(c: connection, code: count, msg: string, cont_resp: bool)
 
 event connection_state_remove(c: connection)
 	{
-	if ( c$id in ftp_ext_sessions )
+	if ( c$id in ftp_ext_sessions && ftp_ext_sessions[c$id]$ready )
 		{
 		event ftp_ext(c$id, ftp_ext_sessions[c$id]);
 		delete ftp_ext_sessions[c$id];
