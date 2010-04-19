@@ -318,9 +318,7 @@ event http_header(c: connection, is_orig: bool, name: string, value: string) &pr
 		if ( /Java\// in value )
 			{
 			local java_string = split_n(value, /Java\/[0-9\._]*$/, T, 2)[2];
-			print java_string;
 			local java_ver = default_software_parsing(java_string);
-			print java_ver;
 			event software_version_found(c, c$id$orig_h, 
 			                             java_ver,
 			                             "Browser Plugin");
