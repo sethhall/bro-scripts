@@ -185,7 +185,6 @@ function default_software_parsing(sw: string): software
 	if ( |version_parts| >= 2 )
 		{
 		local version_numbers = split_n(version_parts[2], /[\.\-_[:blank:]]/, F, 3);
-			print version_numbers;
 		if ( |version_numbers| >= 4 )
 			v$addl = version_numbers[4];
 		if ( |version_numbers| >= 3 )
