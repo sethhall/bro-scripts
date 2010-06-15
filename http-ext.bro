@@ -11,10 +11,13 @@ type http_ext_session_info: record {
 	referrer: string &default="";
 	user_agent: string &default="";
 	proxied_for: string &default="";
+	username: string &default="";
+	password: string &default="";
 	mime_type: string &default="";
 	md5: string &default="";
 	status_code: count &default=0;
 	status_msg: string &default="";
+	post_vars: vector of string;
 
 	force_log: bool &default=F; # This will force the request to be logged (if doing any logging)
 	force_log_client_body: bool &default=F; # This will force the client body to be logged.
@@ -34,6 +37,7 @@ function default_http_ext_session_info(): http_ext_session_info
 	x$start_time=network_time();
 	x$force_log_reasons=set();
 	x$tags=set();
+	x$post_vars=vector("");
 	return x;
 	}
 
@@ -331,6 +335,17 @@ event http_header(c: connection, is_orig: bool, name: string, value: string) &pr
 			ci$proxied_for = fmt("(%s::%s)", name, value);
 		else
 			ci$proxied_for = fmt("%s, (%s::%s)", ci$proxied_for, name, value);
+		}
+		
+	else if ( name == "AUTHORIZATION" )
+		{
+		if ( /^Basic / in value )
+			{
+			local userpass = decode_base64(sub(value, /Basic /, ""));
+			local up = split(userpass, /:/);
+			ci$username = up[1];
+			ci$password = up[2];
+			}
 		}
 		
 	else if ( name == "X-FLASH-VERSION" )
