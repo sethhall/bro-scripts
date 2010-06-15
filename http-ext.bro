@@ -318,7 +318,16 @@ event http_header(c: connection, is_orig: bool, name: string, value: string) &pr
 		
 		if ( ignored_user_agents in value ) 
 			return;
-			
+		
+		if ( /Java\// in value )
+			{
+			local java_string = split_n(value, /Java\/[0-9\._]*$/, T, 2)[2];
+			local java_ver = default_software_parsing(java_string);
+			event software_version_found(c, c$id$orig_h, 
+			                             java_ver,
+			                             "Browser Plugin");
+			}
+		
 		if ( addr_matches_hosts(c$id$orig_h, track_user_agents_for) &&
 			 value !in known_user_agents[c$id$orig_h] )
 			{

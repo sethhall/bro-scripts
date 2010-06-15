@@ -181,15 +181,16 @@ function default_software_parsing(sw: string): software
 	{
 	local v = get_default_software_version();
 	local version_parts = split_all(sw, /[0-9\-\.]{2,}/);
-	if ( |version_parts| >= 3 )
+	
+	if ( |version_parts| >= 2 )
 		{
-		local version_numbers = split_all(version_parts[2], /[\.\-]/);
-		if ( |version_numbers| >= 7 )
-			v$addl = version_numbers[7];
-		if ( |version_numbers| >= 5 )
-			v$minor2 = to_int(version_numbers[5]);
+		local version_numbers = split_n(version_parts[2], /[\.\-_[:blank:]]/, F, 3);
+		if ( |version_numbers| >= 4 )
+			v$addl = version_numbers[4];
 		if ( |version_numbers| >= 3 )
-			v$minor = to_int(version_numbers[3]);
+			v$minor2 = to_int(version_numbers[3]);
+		if ( |version_numbers| >= 2 )
+			v$minor = to_int(version_numbers[2]);
 		if ( |version_numbers| >= 1 )
 			v$major = to_int(version_numbers[1]);
 		}
