@@ -21,6 +21,11 @@ signature matchfile-script {
 	event "application/x-script"
 }
 
+signature matchfile-wmv {
+	http-reply-body /\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C/
+	event "video/x-ms-wmv"
+}
+
 signature matchfile-flv {
 	http-reply-body /\x46\x4C\x56\x01/
 	event "video/x-flv"
@@ -56,6 +61,16 @@ signature matchfile-msoffice {
 signature matchfile-rtf {
 	http-reply-body /\x7B\x5C\x72\x74\x66\x31/
 	event "application/rtf"
+}
+
+signature matchfile-lnk {
+	http-reply-body /\x4C\x00\x00\x00\x01\x14\x02\x00\x00\x00\x00\x00\xC0\x00\x00\x00\x00\x00\x00\x46/
+	event "application/x-ms-shortcut"
+}
+
+signature matchfile-torrent {
+	http-reply-body /\x64\x38\x3A\x61\x6E\x6E\x6F\x75\x6E\x63\x65/
+	event "application/x-bittorrent"
 }
 
 signature matchfile-pdf {
