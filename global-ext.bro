@@ -9,6 +9,20 @@ const subnet_to_admin_table: table[subnet] of string = {
 	[0.0.0.0/0] = "",
 } &redef;
 
+###############################################################
+# Make the default signature action ignore certain signatures
+###############################################################
+const ignored_signatures = /INTENTIONALLY_BLANK/ &redef;
+function default_signature_action(sig: string): SigAction
+	{
+	if ( ignored_signatures in sig )
+		return SIG_IGNORE;
+	else
+		return SIG_ALARM;
+	}
+redef signature_actions &default=default_signature_action;
+###############################################################
+
 # This defines the event that is used by the bro-dblogger application
 # to push data from Bro directly into a database.
 #  see: http://github.com/sethhall/bro-dblogger

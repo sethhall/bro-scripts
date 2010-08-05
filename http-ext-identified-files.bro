@@ -32,15 +32,8 @@ export {
 # Don't delete the http sessions at the end of the request!
 redef watch_reply=T;
 
-# Make the default signature action ignore anything beginning with "matchfile"
-function default_signature_action(sig: string): SigAction
-	{
-	if ( /^matchfile-/ in sig )
-		return SIG_IGNORE;
-	else
-		return SIG_ALARM;
-	}
-redef signature_actions &default=default_signature_action;
+# Ignore the signatures used to match files
+redef ignored_signatures += /^matchfile-/;
 
 # This script uses the file tagging method to create a separate file.
 event bro_init()
