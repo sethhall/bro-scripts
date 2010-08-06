@@ -40,8 +40,8 @@ export {
 # an MD5 hash.
 event file_transferred(c: connection, prefix: string, descr: string, mime_type: string)
 	{
-	if ( generate_md5 in mime_type && 
-		 c$id in conn_info &&
+	if ( c$id in conn_info && 
+		 (generate_md5 in mime_type || conn_info[c$id]$generate_md5 ) && 
 		 c$id !in building_md5_sums )
 		{
 		add building_md5_sums[c$id];
