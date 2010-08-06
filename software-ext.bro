@@ -145,13 +145,6 @@ event software_register(c: connection, host: addr, s: software, descr: string)
 	hs[s$name] = s;
 	}
 
-event software_version_found(c: connection, host: addr, s: software,
-				descr: string)
-	{
-	if ( addr_matches_hosts(host, logging) )
-		event software_register(c, host, s, descr);
-	}
-
 
 ########################################
 # Below are internally defined events. #

@@ -14,6 +14,7 @@ type http_ext_session_info: record {
 	username: string &default="";
 	password: string &default="";
 	mime_type: string &default="";
+	generate_md5: bool &default=F;
 	md5: string &default="";
 	status_code: count &default=0;
 	status_msg: string &default="";
@@ -321,11 +322,15 @@ event http_header(c: connection, is_orig: bool, name: string, value: string) &pr
 		
 		if ( /Java\// in value )
 			{
-			local java_string = split_n(value, /Java\/[0-9\._]*$/, T, 2)[2];
-			local java_ver = default_software_parsing(java_string);
-			event software_version_found(c, c$id$orig_h, 
-			                             java_ver,
-			                             "Browser Plugin");
+			local java_tokens = split_n(value, /Java\//, F, 2);
+			if ( |java_tokens| == 2 )
+				{
+				local java_string = fmt("Java/%s", java_tokens[2]);
+				local java_ver = default_software_parsing(java_string);
+				event software_version_found(c, c$id$orig_h, 
+				                             java_ver,
+				                             "Browser Plugin");
+				}
 			}
 		
 		if ( addr_matches_hosts(c$id$orig_h, track_user_agents_for) &&
@@ -352,8 +357,16 @@ event http_header(c: connection, is_orig: bool, name: string, value: string) &pr
 			{
 			local userpass = decode_base64(sub(value, /Basic /, ""));
 			local up = split(userpass, /:/);
-			ci$username = up[1];
-			ci$password = up[2];
+			if ( |up| >= 2 )
+				{
+				ci$username = up[1];
+				ci$password = up[2];
+				}
+			else
+				{
+				ci$username = "<problem-decoding>";
+				ci$password = userpass;
+				}
 			}
 		}
 		
