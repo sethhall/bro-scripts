@@ -1,14 +1,16 @@
 @load listen-clear
 
-type snort_alert_data: record {
-	ts: time;                     # timestamp
-	sig_generator: count;         # which part of snort generated the alert?
-	sig_id: count;                # sig id for this generator
-	sig_rev: count;               # sig revision for this id
-	event_classification: string; # event classification
-	event_priority: count;        # event priority
-	event_id: count;              # event ID
-	event_reference: count;       # reference to other events that have gone off,
+type barnyard_alert_data: record {
+	sensor_id: count;           # sensor that originated this event
+	ts: time;                   # timestamp
+	signature_id: count;        # sig id for this generator
+	generator_id: count;        # which generator generated the alert?
+	signature_revision: count;  # sig revision for this id
+	classification_id: count;   # event classification
+	classification: string;
+	priority_id: count;         # event priority
+	event_id: count;            # event ID
+	#references: set[string] &optional;   # reference to other events that have gone off,
 };
 
 type packet_id: record {
@@ -18,50 +20,49 @@ type packet_id: record {
 	dst_p: port;
 };
 
-# This is the event that Snort instances will send if they're configured with
-# the bro_alert output plugin.
-global snort_alert: event(id: packet_id, sad: snort_alert_data, msg: string, packet: string);
-
-module Snort;
+# This is the event that Barnyard2 instances will send if they're 
+# configured with the bro_alert output plugin.
+global barnyard_alert: event(id: packet_id, sad: barnyard_alert_data, msg: string, data: string);
 
 redef Remote::destinations += {
-	["snort"] = [$host=127.0.0.1, $connect=F, $sync=F, $class="snort", $events=/snort_alert/ ]
+	["barnyard"] = [$host=127.0.0.1, $connect=F, $sync=F, $class="barnyard", $events=/barnyard_alert/ ]
 };
 
+
+module Barnyard;
+
 export {
-	# pid2cid can convert a Snort packet_id value to a conn_id value in the
+	# pid2cid can convert a Barnyard packet_id value to a conn_id value in the
 	# case that you might need to index into an existing data structure 
 	# elsewhere within Bro.
 	global pid2cid: function(p: packet_id): conn_id;
+	
+	global log_file = open_log_file("barnyard");
 }
-
 
 function pid2cid(p: packet_id): conn_id
 	{
 	return [$orig_h=p$src_ip, $orig_p=p$src_p, $resp_h=p$dst_ip, $resp_p=p$dst_p];
 	}
 
-event snort_alert(id: packet_id, sad: snort_alert_data, msg: string, packet: string)
+event barnyard_alert(id: packet_id, sad: barnyard_alert_data, msg: string, data: string)
 	{
-	if ( /Corporate/ in sad$event_classification )
-		return;
+	local proto_connection_string: string;
+	if ( id$src_p == 0/tcp )
+		proto_connection_string = fmt("{PROTO:255} %s -> %s", id$src_ip, id$dst_ip);
+	else
+		proto_connection_string = fmt("{%s} %s:%d -> %s:%d", 
+		                              to_upper(fmt("%s", get_port_transport_proto(id$dst_p))),
+		                              id$src_ip, id$src_p, id$dst_ip, id$dst_p);
 	
-	print pid2cid(id);
-	print fmt("%.6f class:%s pri:%d ev_id:%d ev_ref:%d sig_gen:%d sig_id:%d sig_rev:%d msg:%s", sad$ts, sad$event_classification, sad$event_priority, sad$event_id, sad$event_reference, sad$sig_generator, sad$sig_id, sad$sig_rev, msg);
-	print packet;
+	print log_file, fmt("%.6f [**] [%d:%d:%d] %s [**] [Classification: %s] [Priority: %d] %s", 
+	                     sad$ts,
+	                     sad$generator_id,
+	                     sad$signature_id,
+	                     sad$signature_revision,
+	                     msg, 
+	                     sad$classification, 
+	                     sad$priority_id, 
+	                     proto_connection_string);
 	}
-
-event bro_init() &priority=-10
-	{
-	print "ready.";
-	}
-
-event remote_connection_established(p: event_peer)
-	{
-	print "remote connection established";
-	}
-
-event remote_connection_closed(p: event_peer)
-	{
-	print "remote connection closed";
-	}
+	
