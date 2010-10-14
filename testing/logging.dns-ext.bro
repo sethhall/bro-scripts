@@ -4,13 +4,13 @@
 module DNS;
 
 export {
+	# Which DNS queries to record.
+	# Choices are: Inbound, Outbound, Enabled, Disabled
+	const query_logging = Enabled &redef;
+
 	# If set to T, this will split inbound and outbound requests
 	# into separate files.  F merges everything into a single file.
-	const split_log_file = T &redef;
-	
-	# Which DNS queries to record.
-	# Choices are: Inbound, Outbound, All, None
-	const query_logging = All &redef;
+	const split_log_file = F &redef;
 	
 	# Make this value true to reduce the logs to only what's being 
 	# queried for

@@ -3,7 +3,7 @@ module LOG;
 export {
 	# The record type to store logging information.
 	type log_info: record {
-		dh:           Directions_and_Hosts &default=All;
+		dh:           Directions_and_Hosts &default=Enabled;
 		split:        bool                 &default=F;
 		raw_output:   bool                 &default=F;
 		header:       string               &default="";

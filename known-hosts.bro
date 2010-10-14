@@ -4,7 +4,7 @@ module KnownHosts;
 
 export {
 	# The hosts whose existence should be logged.
-	# Choices are: LocalHosts, RemoteHosts, AllHosts
+	# Choices are: LocalHosts, RemoteHosts, Enabled, Disabled
 	const logging = LocalHosts &redef;
 	
 	# In case you are interested in more than logging just local assets

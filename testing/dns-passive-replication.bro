@@ -8,13 +8,13 @@ redef dns_skip_all_addl = F;
 module DNS;
 
 export {
+	# Which DNS servers replies should be logged.
+	# Choices are: LocalHosts, RemoteHosts, Enabled, Disabled
+	const logging_replies = Enabled &redef;
+
 	# If set to T, this will split the log into separate files.
 	# F merges everything into a single file.
 	const split_log_file = F &redef;
-	
-	# Which DNS servers replies should be logged.
-	# Choices are: LocalHosts, RemoteHosts, AllHosts, NoHosts
-	const logging_replies = AllHosts &redef;
 }
 
 # Turn off the dns.log file.

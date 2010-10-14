@@ -6,11 +6,11 @@ module SMTP;
 export {
 	# If set to T, this will split inbound and outbound transactions
 	# into separate files.  F merges everything into a single file.
-	const split_log_file = T &redef;
+	const split_log_file = F &redef;
 	
 	# Which mail transactions to log.
-	# Choices are: Inbound, Outbound, All
-	const logging = All &redef;
+	# Choices are: Inbound, Outbound, Enabled, Disabled
+	const logging = Enabled &redef;
 }
 
 event bro_init()

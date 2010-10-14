@@ -6,11 +6,11 @@ module HTTP;
 export {
 	# If set to T, this will split inbound and outbound transactions
 	# into separate files.  F merges everything into a single file.
-	const split_log_file = T &redef;
+	const split_log_file = F &redef;
 	
 	# Which http transactions to log.
-	# Choices are: Inbound, Outbound, All
-	const logging = All &redef;
+	# Choices are: Inbound, Outbound, Enabled, Disabled
+	const logging = Enabled &redef;
 	
 	# This is list of subnets containing web servers that you'd like to log their
 	# traffic regardless of the "logging" variable.
@@ -31,9 +31,9 @@ event bro_init() &priority=10
 	                                       "mime_type", "md5",
 	                                       "status_code", "status_msg"));
 	
-	# Set this log to always accept output (All) because the POST logging
+	# Set this log to always accept output (Enabled) because the POST logging
 	# must be specifically enabled per-request anyway.
-	LOG::create_logs("http-client-body", All, split_log_file, T);
+	LOG::create_logs("http-client-body", Enabled, split_log_file, T);
 	LOG::define_header("http-client-body", cat_sep("\t", "\\N",
 	                                               "ts",
 	                                               "orig_h", "orig_p",

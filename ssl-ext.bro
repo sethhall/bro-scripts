@@ -4,13 +4,13 @@
 module SSL_KnownCerts;
 
 export {
+	# Certificates presented by which hosts to record.
+	# Choices are: LocalHosts, RemoteHosts, Enabled, Disabled
+	const logging = LocalHosts &redef;
+
 	# If set to T, this will split local and remote certs
 	# into separate files.  F merges everything into a single file.
 	const split_log_file = F &redef;
-	
-	# Certificates presented by which hosts to record.
-	# Choices are: LocalHosts, RemoteHosts, AllHosts, NoHosts
-	const logging = LocalHosts &redef;
 	
 	# The list of all detected certs.  This prevents over-logging.
 	global certs: set[addr, port, string] &create_expire=1day &synchronized;

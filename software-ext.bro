@@ -5,8 +5,8 @@ module Software;
 
 export {
 	# The hosts whose software should be logged.
-	# Choices are: LocalHosts, RemoteHosts, AllHosts, NoHosts
-	const logging = LocalHosts &redef;
+	# Choices are: LocalHosts, RemoteHosts, Enabled, Disabled
+	const logging = Enabled &redef;
 
 	# In case you are interested in more than logging just local assets
 	# you can split the log file.

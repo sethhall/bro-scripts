@@ -9,8 +9,8 @@ export {
 	const split_log_file = F &redef;
 	
 	# Which SSH logins to record.
-	# Choices are: Inbound, Outbound, All
-	const logging = All &redef;
+	# Choices are: Inbound, Outbound, Enabled, Disabled
+	const logging = Enabled &redef;
 }
 
 event bro_init()

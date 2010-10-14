@@ -8,8 +8,8 @@ export {
 	# into separate files.  F merges everything into a single file.
 	const split_log_file = F &redef;
 	# Which mail transactions to log.
-	# Choices are: Inbound, Outbound, All
-	const logging = All &redef;
+	# Choices are: Inbound, Outbound, Enabled, Disabled
+	const logging = Enabled &redef;
 }
 
 event bro_init()

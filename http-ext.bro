@@ -153,11 +153,12 @@ export {
 		&synchronized
 		&default=addr_empty_string_set
 		&redef;
+		
+	# This is used internally by other scripts to indicate when the http_ext 
+	# event should be raised.
+	const watch_reply = F &redef;	
 }
 
-# This is used internally by other scripts to indicate when the http_ext 
-# event should be raised.
-const watch_reply = F &redef;
 
 # This is called from signatures (theoretically)
 function log_post(state: signature_state, data: string): bool
@@ -297,7 +298,8 @@ event http_header(c: connection, is_orig: bool, name: string, value: string) &pr
 		if ( name == "SERVER" )
 			{
 			local ver = default_software_parsing(value);
-			event software_version_found(c, c$id$resp_h, ver, "Web Server");
+			if ( ver$name != "" )
+				event software_version_found(c, c$id$resp_h, ver, "Web Server");
 			}
 		return;
 		}
