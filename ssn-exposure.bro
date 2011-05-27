@@ -11,6 +11,16 @@ export {
 	# Example for redefining this variable... (huge sets are handled easily)
 	#   redef SSN::SSN_list = {"264439985", "351669087"};
 	const SSN_list: set[string] &redef;
+	
+	# Check the following URL and set this value to what you expect 
+	# most SSNs at your site to be.  
+	#     http://www.mrfa.org/ssn.htm
+	# For example, a state university can probably assume that many SSNs 
+	# they hold will be for people from that state or possibly neighboring states.
+	# 
+	# This is as an alternate to acquiring a list of known SSNs held
+	# at your business/university.
+	const SSN_prefixes = {[$low=268, $high=302]} &redef;
 
 	# As commented above, set this to T if you are using hashed SSNs in your 
 	# SSN_list variable.
@@ -84,8 +94,25 @@ function check_ssns(c: connection, data: string): bool
 				hash_ssn = md5_hash(ssn);
 			else
 				hash_ssn = ssn;
-				
-			if ( hash_ssn in SSN_list )
+
+			local it_matched = F;
+
+			if ( |SSN_list| == 0 )
+				{
+				local ssn_prefix_test = to_count(sub_bytes(ssn, 0, 3));
+				for ( prefix in SSN_prefixes )
+					{
+					if ( ssn_prefix_test >= prefix$low &&
+					     ssn_prefix_test <= prefix$high )
+						it_matched = T;
+					}
+				}	
+			else if ( hash_ssn in SSN_list )
+				{
+				it_matched = T;
+				}
+
+			if ( it_matched )
 				{
 				local id = c$id;
 				#print fmt("  %s - Found it! (%s)", ssn, md5_hash(ssn));
@@ -104,7 +131,7 @@ function check_ssns(c: connection, data: string): bool
 					        $sub=hash_ssn]);
 					}
 			
-				print ssn_log, cat_sep("\t", "\\N", network_time(),
+				print cat_sep("\t", "\\N", network_time(),
 				                       id$orig_h, fmt("%d", id$orig_p), 
 				                       id$resp_h, fmt("%d", id$resp_p), 
 				                       ssn, data);
