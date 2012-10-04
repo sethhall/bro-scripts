@@ -16,7 +16,7 @@ export {
 
 event bro_init()
 	{
-	Metrics::add_filter(MISSING_AAAA, [$break_interval=1hour]);
+	Metrics::add_filter(MISSING_AAAA, [$break_interval=1hr]);
 	}
 
 event DNS::log_dns(rec: DNS::Info)
