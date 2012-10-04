@@ -23,11 +23,6 @@ event DNS::log_dns(rec: DNS::Info)
 	{
 	if ( rec?$rcode && rec$rcode == 0 && 
 	     rec?$qtype && rec$qtype == 28 &&
-	     ! rec?$answers )
-		print rec;
-
-	if ( rec?$rcode && rec$rcode == 0 && 
-	     rec?$qtype && rec$qtype == 28 &&
 	     ! rec?$answers &&
 	     Site::is_local_addr(rec$id$resp_h) &&
 	     ! Site::is_local_addr(rec$id$orig_h) )
