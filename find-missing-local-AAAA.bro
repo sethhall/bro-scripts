@@ -3,8 +3,12 @@
 ##! to enable with IPv6 since it will show the most frequently requested sites
 ##! that don't currently have IPv6.
 ##!
-##! There is an assumption being made that Bro is seeing external authoritative 
-##! requests for your local DNS zones.
+##! Note::
+##!   Site::local_zones must be configured in order for this script to work.
+##!
+##! Todo::
+##!   We are ignoring the rcode right now because of a small problem in the
+##!   base DNS scripts for 2.0 and 2.1.
 
 @load base/frameworks/metrics
 
@@ -21,11 +25,10 @@ event bro_init()
 
 event DNS::log_dns(rec: DNS::Info)
 	{
-	if ( rec?$rcode && rec$rcode == 0 && 
-	     rec?$qtype && rec$qtype == 28 &&
-	     ! rec?$answers &&
-	     Site::is_local_addr(rec$id$resp_h) &&
-	     ! Site::is_local_addr(rec$id$orig_h) )
+	if ( rec?$query && rec?$qtype && !rec?$answers &&
+	     #rec?$rcode && rec$rcode == 0 &&
+	     rec$qtype == 28 &&
+	     Site::is_local_name(rec$query) )
 			{
 			Metrics::add_data(MISSING_AAAA, [$str=rec$query], 1);
 			}
