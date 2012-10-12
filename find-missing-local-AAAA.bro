@@ -3,12 +3,10 @@
 ##! to enable with IPv6 since it will show the most frequently requested sites
 ##! that don't currently have IPv6.
 ##!
-##! Note::
+##! Notes::
 ##!   Site::local_zones must be configured in order for this script to work.
-##!
-##! Todo::
-##!   We are ignoring the rcode right now because of a small problem in the
-##!   base DNS scripts for 2.0 and 2.1.
+##!   This script requires a fix that is included in the git repository and 
+##!   and should be in the master branch soon.  The version needs to be >2.1
 
 @load base/frameworks/metrics
 
@@ -26,7 +24,7 @@ event bro_init()
 event DNS::log_dns(rec: DNS::Info)
 	{
 	if ( rec?$query && rec?$qtype && !rec?$answers &&
-	     #rec?$rcode && rec$rcode == 0 &&
+	     rec?$rcode && rec$rcode == 0 &&
 	     rec$qtype == 28 &&
 	     Site::is_local_name(rec$query) )
 			{
