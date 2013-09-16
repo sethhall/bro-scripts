@@ -16,7 +16,7 @@ export {
 	const top_k = 10 &redef;
 
 	## How often the log should be written.
-	const logging_interval = 1min &redef;
+	const logging_interval = 1hr &redef;
 
 	## The records that should be tracked and logged.
 	const records: set[string] = { 
