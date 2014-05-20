@@ -26,7 +26,6 @@ event bro_init()
 
 event Intel::match(s: Intel::Seen, items: set[Intel::Item]) &priority=5
 	{
-	print "match!";
 	local info = Intel::Info($ts=network_time(), $seen=s);
 
 	if ( s?$f )
